@@ -154,13 +154,18 @@ for Roots in `echo $RootF|xargs -I{} -n1 echo {}` ; do
     #   12
     #
      if [[ "$Roots" == */ ]]; then
-            LocalXML="$Rootsapp/etc/local.xml"
+            XML="app/etc/local.xml";
+            LocalXML="$Roots$XML"
             $SETCOLOR_TITLE
             echo "Root-XML with "/" : `echo $LocalXML`";
             $SETCOLOR_NORMAL
             # SERVER_IP
             # check redis IP
-             CacheRedisIP=$(cat `echo $LocalXML`| grep Cache_Backend_Redis -A13 | grep "<server>"|uniq| cut -d ">" -f2 | cut -d "<" -f1)
+             CacheRedisIP=$(cat $LocalXML| grep Cache_Backend_Redis -A13 | grep "<server>"|uniq| cut -d ">" -f2 | cut -d "<" -f1)
+             #if CacheRedisIP = "" ; then ->
+             if [ -z "$CacheRedisIP" ]; then
+                      CacheRedisIP=$(cat $LocalXML| grep Cache_Backend_Redis -A13| grep "<server>"|uniq|cut -d "[" -f3| cut -d "]" -f1)
+             fi                      
              echo "Cache Redis server/IP: `echo $CacheRedisIP`";
             #
             #PORTS
