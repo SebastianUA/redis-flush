@@ -68,7 +68,29 @@ else
 fi
 
 function Flush_Redis_Cache () {
-
+    #
+    # SERVER_IP
+    # check redis IP
+     CacheRedisIP=$(cat $LocalXML| grep Cache_Backend_Redis -A13 | grep "<server>"|uniq| cut -d ">" -f2 | cut -d "<" -f1)
+     #if CacheRedisIP = "" ; then ->
+      if [ -z "$CacheRedisIP" ]; then
+               CacheRedisIP=$(cat $LocalXML| grep Cache_Backend_Redis -A13| grep "<server>"|uniq|cut -d "[" -f3| cut -d "]" -f1)
+      fi                      
+      echo "Cache Redis server/IP: `echo $CacheRedisIP`";
+      #
+      #PORTS
+       CacheRedisPorts=$(cat `echo $LocalXML`| grep Cache_Backend_Redis -A13 | grep port | cut -d ">" -f2 |cut -d "<" -f1)
+       echo "Cache-redis-ports: `echo $CacheRedisPorts`";
+      # PS 6381 - don't to flush
+        IgnoreCacheRedisPorts="6381"
+      #
+      # redis-cli -h 127.0.0.1 -p 6378 flushall   (sessions)
+      # redis-cli -h 127.0.0.1 -p 6379 flushall   (cache)
+      # redis-cli -h 127.0.0.1 -p 6380 flushall    (full_page_cache)
+      #Check_DB
+       CacheRedisDB=$(cat `echo $LocalXML`| grep Cache_Backend_Redis -A13 | grep database | cut -d ">" -f2 |cut -d "<" -f1)
+       echo "CacheRedisDB = `echo $CacheRedisDB`"
+      #    
     for ICacheRedisIP in `echo $CacheRedisIP|xargs -I{} -n1 echo {}` ; do
             echo "Cache Redis server: `echo $ICacheRedisIP`";
             for ICacheRedisPorts in `echo $CacheRedisPorts|xargs -I{} -n1 echo {}` ; do
@@ -104,7 +126,6 @@ function Flush_Redis_Cache () {
                                             send "$Flush_CacheRedisDB\n"
                                             expect "+OK"
                                             sleep 3
-                                            send "echo HELLO WORLD\r"
                                             send "$Close_Expect_with_CacheRedis\n"
 EOF
                                 done;     
@@ -120,6 +141,10 @@ EOF
 } 
 
 function Flush_Memcached () {
+        #  
+        #MEMCACHED
+         MemcachedServer=$(cat `echo $LocalXML`| grep '<memcached>' -A7| grep -E 'host|CDATA|port' | grep -v "ersistent"| grep host| cut -d "[" -f3| cut -d "]" -f1|uniq)
+         MemcachedPort=$(cat `echo $LocalXML`| grep '<memcached>' -A7| grep -E 'host|CDATA|port' | grep -v "ersistent"| grep port| cut -d "[" -f3| cut -d "]" -f1|uniq)
         
         Close_Expect_with_Memcached="quit"
         Flush_Memcached="flush_all"
@@ -159,33 +184,9 @@ for Roots in `echo $RootF|xargs -I{} -n1 echo {}` ; do
             $SETCOLOR_TITLE
             echo "Root-XML with "/" : `echo $LocalXML`";
             $SETCOLOR_NORMAL
-            # SERVER_IP
-            # check redis IP
-             CacheRedisIP=$(cat $LocalXML| grep Cache_Backend_Redis -A13 | grep "<server>"|uniq| cut -d ">" -f2 | cut -d "<" -f1)
-             #if CacheRedisIP = "" ; then ->
-             if [ -z "$CacheRedisIP" ]; then
-                      CacheRedisIP=$(cat $LocalXML| grep Cache_Backend_Redis -A13| grep "<server>"|uniq|cut -d "[" -f3| cut -d "]" -f1)
-             fi                      
-             echo "Cache Redis server/IP: `echo $CacheRedisIP`";
-            #
-            #PORTS
-             CacheRedisPorts=$(cat `echo $LocalXML`| grep Cache_Backend_Redis -A13 | grep port | cut -d ">" -f2 |cut -d "<" -f1)
-             echo "Cache-redis-ports: `echo $CacheRedisPorts`";
-            # PS 6381 - don't to flush
-             IgnoreCacheRedisPorts="6381"
-            #
-            # redis-cli -h 127.0.0.1 -p 6378 flushall   (sessions)
-            # redis-cli -h 127.0.0.1 -p 6379 flushall   (cache)
-            # redis-cli -h 127.0.0.1 -p 6380 flushall    (full_page_cache)
-            #Check_DB
-             CacheRedisDB=$(cat `echo $LocalXML`| grep Cache_Backend_Redis -A13 | grep database | cut -d ">" -f2 |cut -d "<" -f1)
-             echo "CacheRedisDB = `echo $CacheRedisDB`"
             #
             #Run Flush_Redis_Cache function
              Flush_Redis_Cache;
-            #MEMCACHED
-             MemcachedServer=$(cat `echo $LocalXML`| grep '<memcached>' -A7| grep -E 'host|CDATA|port' | grep -v "ersistent"| grep host| cut -d "[" -f3| cut -d "]" -f1|uniq)
-             MemcachedPort=$(cat `echo $LocalXML`| grep '<memcached>' -A7| grep -E 'host|CDATA|port' | grep -v "ersistent"| grep port| cut -d "[" -f3| cut -d "]" -f1|uniq)
             #Run Flush_Memcached function
              Flush_Memcached;
      else
@@ -193,29 +194,8 @@ for Roots in `echo $RootF|xargs -I{} -n1 echo {}` ; do
           $SETCOLOR_TITLE
           echo "Root-XML: `echo $LocalXML`";
           $SETCOLOR_NORMAL
-          # SERVER_IP
-          # check redis IP
-           CacheRedisIP=$(cat `echo $LocalXML`| grep Cache_Backend_Redis -A13 | grep "<server>"|uniq| cut -d ">" -f2 | cut -d "<" -f1)
-           echo "Cache Redis server/IP: `echo $CacheRedisIP`";
-          #
-          #PORTS
-           CacheRedisPorts=$(cat `echo $LocalXML`| grep Cache_Backend_Redis -A13 | grep port | uniq| cut -d ">" -f2 |cut -d "<" -f1)
-           echo "Cache-redis-ports: `echo $CacheRedisPorts`";
-          # PS 6381 - don't to flush
-           IgnoreCacheRedisPorts="6381"
-          #
-          # redis-cli -h 127.0.0.1 -p 6378 flushall   (sessions)
-          # redis-cli -h 127.0.0.1 -p 6379 flushall   (cache)
-          # redis-cli -h 127.0.0.1 -p 6380 flushall    (full_page_cache)
-          #Check_DB
-           CacheRedisDB=$(cat `echo $LocalXML`| grep Cache_Backend_Redis -A13 | grep database | uniq| cut -d ">" -f2 |cut -d "<" -f1)
-           echo "CacheRedisDB = `echo $CacheRedisDB`"
-          #
           #Run Flush_Redis_Cache function
            Flush_Redis_Cache;
-          #MEMCACHED
-           MemcachedServer=$(cat `echo $LocalXML`| grep '<memcached>' -A7| grep -E 'host|CDATA|port' | grep -v "ersistent"| grep host| cut -d "[" -f3| cut -d "]" -f1|uniq)
-           MemcachedPort=$(cat `echo $LocalXML`| grep '<memcached>' -A7| grep -E 'host|CDATA|port' | grep -v "ersistent"| grep port| cut -d "[" -f3| cut -d "]" -f1|uniq)
           #Run Flush_Memcached function
            Flush_Memcached;
      fi     
