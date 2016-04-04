@@ -14,6 +14,7 @@ SETCOLOR_NORMAL="echo -en \\033[0;39m"
 
 SETCOLOR_TITLE="echo -en \\033[1;36m" #Fuscia
 SETCOLOR_NUMBERS="echo -en \\033[0;34m" #BLUE
+
 function Operation_status {
      if [ $? -eq 0 ]; then
          $SETCOLOR_SUCCESS;
@@ -59,7 +60,7 @@ echo "**************************************************************" >> $FlushC
 if ! type -path "expect" > /dev/null 2>&1; then
              yum install expect -y
              $SETCOLOR_TITLE
-             echo "expect was INSTALLED on this server: `hostname`";
+             echo "expect has been INSTALLED on this server: `hostname`";
              $SETCOLOR_NORMAL
 else
         $SETCOLOR_TITLE
@@ -71,17 +72,18 @@ function Flush_Redis_Cache () {
     #
     # SERVER_IP
     # check redis IP
-     CacheRedisIP=$(cat $LocalXML| grep Cache_Backend_Redis -A13 | grep "<server>"|uniq| cut -d ">" -f2 | cut -d "<" -f1)
+     CacheRedisIP=$(cat $LocalXML| grep Cache_Backend_Redis -A13 | grep "<server>"| uniq|cut -d ">" -f2 | cut -d "<" -f1)
      #if CacheRedisIP = "" ; then ->
       if [ -z "$CacheRedisIP" ]; then
-               CacheRedisIP=$(cat $LocalXML| grep Cache_Backend_Redis -A13| grep "<server>"|uniq|cut -d "[" -f3| cut -d "]" -f1)
+               CacheRedisIP=$(cat $LocalXML| grep Cache_Backend_Redis -A13| grep "<server>"|uniq|cut -d "[" -f3| cut -d "]" -f1) 
       fi                      
       echo "Cache Redis server/IP: `echo $CacheRedisIP`";
       #
       #PORTS
        CacheRedisPorts=$(cat `echo $LocalXML`| grep Cache_Backend_Redis -A13 | grep port | cut -d ">" -f2 |cut -d "<" -f1)
+        # CacheRedisPorts=$(cat `echo $LocalXML`|grep Cache_Backend_Redis -A13 | grep port | cut -d "[" -f3| cut -d "]" -f1
        echo "Cache-redis-ports: `echo $CacheRedisPorts`";
-      # PS 6381 - don't to flush
+      # PS 6381 - don't flush
         IgnoreCacheRedisPorts="6381"
       #
       # redis-cli -h 127.0.0.1 -p 6378 flushall   (sessions)
@@ -95,6 +97,9 @@ function Flush_Redis_Cache () {
             echo "Cache Redis server: `echo $ICacheRedisIP`";
             for ICacheRedisPorts in `echo $CacheRedisPorts|xargs -I{} -n1 echo {}` ; do
                 if [ "$ICacheRedisPorts" -ne "$IgnoreCacheRedisPorts" ]; then
+                         # if (CacheRedisPorts| CacheRedisDB =0)  ->
+                         #
+                         #
                          if [ -z "$CacheRedisDB" ]; then
                              R_flush=$(redis-cli -h `echo $ICacheRedisIP` -p `echo $ICacheRedisPorts` flushall)
                              $SETCOLOR_TITLE
@@ -200,11 +205,17 @@ for Roots in `echo $RootF|xargs -I{} -n1 echo {}` ; do
            Flush_Memcached;
      fi     
 done;
-
 # Send report to email list
-#
-mail -s " HOSTNAME is `hostname`" $List_of_emails < $FlushCacheReport
+if [ -z "`rpm -qa | grep mailx`" ]; then
+	yum install mailx -y
+	$SETCOLOR_TITLE
+	echo "service of mail has been installed";
+	$SETCOLOR_NORMAL
+else
+	mail -s " HOSTNAME is `hostname`" $List_of_emails < $FlushCacheReport
+fi	
 rm -f $FlushCacheReport
+#
 echo "LOG_FILE= $FlushCacheReport has been sent";
 #
 echo "|---------------------------------------------------|";
