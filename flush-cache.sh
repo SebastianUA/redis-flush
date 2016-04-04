@@ -33,15 +33,15 @@ function Operation_status {
 FlushCacheReport="/var/log/FlushCacheReport.log"
 if [ ! -f "$FlushCacheReport" ]; then
     $SETCOLOR_TITLE
-    echo "The file flushall-caches.log NOT FOUND in the folder /var/log";
+    echo "The flushall-caches.log file NOT FOUND in the folder /var/log";
     $SETCOLOR_NORMAL
     touch $FlushCacheReport
     $SETCOLOR_TITLE
-    echo "The file $FlushCacheReport was CREATED";
+    echo "The $FlushCacheReport file was CREATED";
     $SETCOLOR_NORMAL
 else
     $SETCOLOR_TITLE
-    echo "The file '$FlushCacheReport' Exists"
+    echo "The '$FlushCacheReport' file allready exists"
     rm -f $FlushCacheReport
     touch $FlushCacheReport
     $SETCOLOR_NORMAL
@@ -70,10 +70,8 @@ fi
 
 function Flush_Redis_Cache () {
     #
-    # SERVER_IP
     # check redis IP
      CacheRedisIP=$(cat $LocalXML| grep Cache_Backend_Redis -A13 | grep "<server>"| uniq|cut -d ">" -f2 | cut -d "<" -f1|uniq)
-     #if CacheRedisIP = "" ; then ->
       if [ -z "$CacheRedisIP" ]; then
                CacheRedisIP=$(cat $LocalXML| grep Cache_Backend_Redis -A13| grep "<server>"|uniq|cut -d "[" -f3| cut -d "]" -f1|uniq) 
       fi                      
@@ -96,13 +94,11 @@ function Flush_Redis_Cache () {
        echo "CacheRedisDB = `echo $CacheRedisDB`"
       #
       # 
-if [ ! -z "$CacheRedisIP|$CacheRedisPorts|$CacheRedisDB" ]; then 
+if [ ! -n "$CacheRedisIP && $CacheRedisPorts && $CacheRedisDB" ]; then 
     for ICacheRedisIP in `echo $CacheRedisIP|xargs -I{} -n1 echo {}` ; do
             echo "Cache Redis server: `echo $ICacheRedisIP`";
             for ICacheRedisPorts in `echo $CacheRedisPorts|xargs -I{} -n1 echo {}` ; do
                 if [ "$ICacheRedisPorts" -ne "$IgnoreCacheRedisPorts" ]; then
-                         # if (CacheRedisPorts| CacheRedisDB =0)  ->
-                         #
                          #
                          if [ -z "$CacheRedisDB" ]; then
                              R_flush=$(redis-cli -h `echo $ICacheRedisIP` -p `echo $ICacheRedisPorts` flushall)
@@ -150,7 +146,7 @@ EOF
     #
 else
      #rm -rf
-     echo "NEED TO RUN <rm -rf */var/cache/*> "; 
+     echo "NEED TO RUN <rm -rf $Roots/var/cache/*> "; 
 fi		 
 } 
 
@@ -187,7 +183,7 @@ for Roots in `echo $RootF|xargs -I{} -n1 echo {}` ; do
     echo "Root-folder: `echo $Roots`";
     $SETCOLOR_NORMAL
     #
-    # if last symbol is "/" then need to delet IT!
+    # if last symbol is "/" then need to delete it!
     # $ a=123
     # $ echo "${a::-1}"
     #   12
@@ -218,7 +214,7 @@ done;
 if [ -z "`rpm -qa | grep mailx`" ]; then
 	yum install mailx -y
 	$SETCOLOR_TITLE
-	echo "service of mail has been installed";
+	echo "service of mail has been installed on `hostname`";
 	$SETCOLOR_NORMAL
 else
 	mail -s " HOSTNAME is `hostname`" $List_of_emails < $FlushCacheReport
