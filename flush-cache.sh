@@ -81,7 +81,9 @@ function Flush_Redis_Cache () {
       #
       #PORTS
        CacheRedisPorts=$(cat `echo $LocalXML`| grep Cache_Backend_Redis -A13 | grep port | cut -d ">" -f2 |cut -d "<" -f1)
-        # CacheRedisPorts=$(cat `echo $LocalXML`|grep Cache_Backend_Redis -A13 | grep port | cut -d "[" -f3| cut -d "]" -f1
+       if [ -z "$CacheRedisPorts" ]; then
+       			CacheRedisPorts=$(cat `echo $LocalXML`|grep Cache_Backend_Redis -A13 | grep port | cut -d "[" -f3| cut -d "]" -f1)
+       fi		
        echo "Cache-redis-ports: `echo $CacheRedisPorts`";
       # PS 6381 - don't flush
         IgnoreCacheRedisPorts="6381"
@@ -92,7 +94,9 @@ function Flush_Redis_Cache () {
       #Check_DB
        CacheRedisDB=$(cat `echo $LocalXML`| grep Cache_Backend_Redis -A13 | grep database | cut -d ">" -f2 |cut -d "<" -f1)
        echo "CacheRedisDB = `echo $CacheRedisDB`"
-      #    
+      #
+      # 
+if [ ! -z "$CacheRedisIP|$CacheRedisPorts|$CacheRedisDB" ]; then 
     for ICacheRedisIP in `echo $CacheRedisIP|xargs -I{} -n1 echo {}` ; do
             echo "Cache Redis server: `echo $ICacheRedisIP`";
             for ICacheRedisPorts in `echo $CacheRedisPorts|xargs -I{} -n1 echo {}` ; do
@@ -143,6 +147,11 @@ EOF
                 echo "Flushed redis cache on $ICacheRedisPorts port";
             done;
      done;
+    #
+     else
+    #		rm -rf
+    		echo "NEED TO RUN <rm -rf */var/cache/*> "; 
+    fi		 
 } 
 
 function Flush_Memcached () {
