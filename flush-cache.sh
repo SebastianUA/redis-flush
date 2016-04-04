@@ -72,10 +72,10 @@ function Flush_Redis_Cache () {
     #
     # SERVER_IP
     # check redis IP
-     CacheRedisIP=$(cat $LocalXML| grep Cache_Backend_Redis -A13 | grep "<server>"| uniq|cut -d ">" -f2 | cut -d "<" -f1)
+     CacheRedisIP=$(cat $LocalXML| grep Cache_Backend_Redis -A13 | grep "<server>"| uniq|cut -d ">" -f2 | cut -d "<" -f1|uniq)
      #if CacheRedisIP = "" ; then ->
       if [ -z "$CacheRedisIP" ]; then
-               CacheRedisIP=$(cat $LocalXML| grep Cache_Backend_Redis -A13| grep "<server>"|uniq|cut -d "[" -f3| cut -d "]" -f1) 
+               CacheRedisIP=$(cat $LocalXML| grep Cache_Backend_Redis -A13| grep "<server>"|uniq|cut -d "[" -f3| cut -d "]" -f1|uniq) 
       fi                      
       echo "Cache Redis server/IP: `echo $CacheRedisIP`";
       #
@@ -92,7 +92,7 @@ function Flush_Redis_Cache () {
       # redis-cli -h 127.0.0.1 -p 6379 flushall   (cache)
       # redis-cli -h 127.0.0.1 -p 6380 flushall    (full_page_cache)
       #Check_DB
-       CacheRedisDB=$(cat `echo $LocalXML`| grep Cache_Backend_Redis -A13 | grep database | cut -d ">" -f2 |cut -d "<" -f1)
+       CacheRedisDB=$(cat `echo $LocalXML`| grep Cache_Backend_Redis -A13 | grep database | cut -d ">" -f2 |cut -d "<" -f1|uniq)
        echo "CacheRedisDB = `echo $CacheRedisDB`"
       #
       # 
