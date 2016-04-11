@@ -93,8 +93,9 @@ function Flush_Redis_Cache () {
        CacheRedisDB=$(cat `echo $LocalXML`| grep Cache_Backend_Redis -A13 | grep database | cut -d ">" -f2 |cut -d "<" -f1|uniq)
        echo "CacheRedisDB = `echo $CacheRedisDB`"
       #
-      # 
-if [ ! -n "$CacheRedisIP && $CacheRedisPorts && $CacheRedisDB" ]; then 
+      # -n : string is not null.
+      # -z : string is null, that is, has zero length
+if [ ! -z "$CacheRedisIP|$CacheRedisPorts|$CacheRedisDB" ]; then 
     for ICacheRedisIP in `echo $CacheRedisIP|xargs -I{} -n1 echo {}` ; do
             echo "Cache Redis server: `echo $ICacheRedisIP`";
             for ICacheRedisPorts in `echo $CacheRedisPorts|xargs -I{} -n1 echo {}` ; do
@@ -192,7 +193,7 @@ for Roots in `echo $RootF|xargs -I{} -n1 echo {}` ; do
             XML="app/etc/local.xml";
             LocalXML="$Roots$XML"
             $SETCOLOR_TITLE
-            echo "Root-XML with "/" : `echo $LocalXML`";
+            echo "Root-XML with '/' : `echo $LocalXML`";
             $SETCOLOR_NORMAL
             #
             #Run Flush_Redis_Cache function
