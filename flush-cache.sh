@@ -78,9 +78,9 @@ function Flush_Redis_Cache () {
       echo "Cache Redis server/IP: `echo $CacheRedisIP`";
       #
       #PORTS
-       CacheRedisPorts=$(cat `echo $LocalXML`| grep Cache_Backend_Redis -A13 | grep port | cut -d ">" -f2 |cut -d "<" -f1|uniq)
+       CacheRedisPorts=$(cat `echo $LocalXML`| grep Cache_Backend_Redis -A13 | grep port | cut -d ">" -f2 |cut -d "<" -f1|uniq| grep -Ev "gzip")
        if [ -z "$CacheRedisPorts" ]; then
-       			CacheRedisPorts=$(cat `echo $LocalXML`|grep Cache_Backend_Redis -A13 | grep port | cut -d "[" -f3| cut -d "]" -f1|uniq)
+       			CacheRedisPorts=$(cat `echo $LocalXML`|grep Cache_Backend_Redis -A13 | grep port | cut -d "[" -f3| cut -d "]" -f1|uniq| grep -Ev "gzip")
        fi		
        echo "Cache-redis-ports: `echo $CacheRedisPorts`";
       # PS 6381 - don't flush
