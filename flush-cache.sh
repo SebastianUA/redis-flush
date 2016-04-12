@@ -69,6 +69,9 @@ else
 fi
 
 function Flush_Redis_Cache () {
+    echo "**********************************************";
+    echo "********************REDIS*********************";
+    echo "**********************************************";  
     #
     # check redis IP
      CacheRedisIP=$(cat $LocalXML| grep Cache_Backend_Redis -A13 | grep "<server>"| uniq|cut -d ">" -f2 | cut -d "<" -f1|uniq)
@@ -153,13 +156,20 @@ fi
 
 function Flush_Memcached () {
         #MEMCACHED
+        echo "**********************************************";
+        echo "******************MEMCACHED*******************";
+        echo "**********************************************";
          MemcachedServer=$(cat `echo $LocalXML`| grep '<memcached>' -A7| grep -E 'host|CDATA|port' | grep -v "ersistent"| grep host| cut -d "[" -f3| cut -d "]" -f1|uniq)
          MemcachedPort=$(cat `echo $LocalXML`| grep '<memcached>' -A7| grep -E 'host|CDATA|port' | grep -v "ersistent"| grep port| cut -d "[" -f3| cut -d "]" -f1|uniq)
         
         Close_Expect_with_Memcached="quit"
         Flush_Memcached="flush_all"
 
-if [ ! -z "$MemcachedServer|$MemcachedPort" ]; then
+        $SETCOLOR_TITLE
+        echo "Memcached Server => `echo $MemcachedServer`";
+        echo "Memcached Port => `echo $MemcachedPort`";
+        $SETCOLOR_NORMAL    
+if [  -z "$MemcachedServer|$MemcachedPort" ]; then
          `which expect | grep -E expect` <<EOF
                 spawn telnet $MemcachedServer $MemcachedPort
                 expect "Escape character is '^]'."
@@ -172,10 +182,10 @@ EOF
         echo "memcached has been flushed on server `hostname`";
         $SETCOLOR_NORMAL
 else
-                $SETCOLOR_TITLE
-                echo "Din't find memcached on server `hostname`";
-                $SETCOLOR_NORMAL
-        fi
+        $SETCOLOR_TITLE
+        echo "Din't find memcached on server `hostname`";
+        $SETCOLOR_NORMAL
+fi
 }
 #
 RootF=$(cat /etc/nginx/conf.d/*.conf | grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|-f)"|uniq)
