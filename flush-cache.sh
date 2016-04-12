@@ -70,6 +70,13 @@ fi
 
 function Flush_Redis_Cache () {
     #
+    RootF=$(cat /etc/nginx/conf.d/*.conf | grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|-f)"|uniq)
+    if [ -z "$RootF" ]; then
+        $SETCOLOR_TITLE
+        echo "No such file or directory (nginx)";
+        $SETCOLOR_NORMAL
+        #cat: /etc/nginx/conf.d/*.conf: No such file or directory 
+    fi 
     # check redis IP
      CacheRedisIP=$(cat $LocalXML| grep Cache_Backend_Redis -A13 | grep "<server>"| uniq|cut -d ">" -f2 | cut -d "<" -f1|uniq)
       if [ -z "$CacheRedisIP" ]; then
@@ -152,7 +159,6 @@ fi
 } 
 
 function Flush_Memcached () {
-        #  
         #MEMCACHED
          MemcachedServer=$(cat `echo $LocalXML`| grep '<memcached>' -A7| grep -E 'host|CDATA|port' | grep -v "ersistent"| grep host| cut -d "[" -f3| cut -d "]" -f1|uniq)
          MemcachedPort=$(cat `echo $LocalXML`| grep '<memcached>' -A7| grep -E 'host|CDATA|port' | grep -v "ersistent"| grep port| cut -d "[" -f3| cut -d "]" -f1|uniq)
@@ -160,7 +166,7 @@ function Flush_Memcached () {
         Close_Expect_with_Memcached="quit"
         Flush_Memcached="flush_all"
 
-if [ -z "$MemcachedServer|$MemcachedPort" ]; then
+if [ ! -z "$MemcachedServer|$MemcachedPort" ]; then
          `which expect | grep -E expect` <<EOF
                 spawn telnet $MemcachedServer $MemcachedPort
                 expect "Escape character is '^]'."
@@ -169,15 +175,15 @@ if [ -z "$MemcachedServer|$MemcachedPort" ]; then
                 sleep 1
                 send "$Close_Expect_with_Memcached\n"
 EOF
+        $SETCOLOR_TITLE
         echo "memcached has been flushed on server `hostname`";
+        $SETCOLOR_NORMAL
 else
                 $SETCOLOR_TITLE
                 echo "Din't find memcached on server `hostname`";
                 $SETCOLOR_NORMAL
         fi
 }
-
-RootF=$(cat /etc/nginx/conf.d/*.conf | grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|-f)"|uniq)
 
 for Roots in `echo $RootF|xargs -I{} -n1 echo {}` ; do
     $SETCOLOR_TITLE
@@ -195,6 +201,12 @@ for Roots in `echo $RootF|xargs -I{} -n1 echo {}` ; do
             $SETCOLOR_TITLE
             echo "Root-XML with '/' : `echo $LocalXML`";
             $SETCOLOR_NORMAL
+            #
+            #
+            # if [$LocalXML = "* No such file or directory *" ] then ->>>>>
+            #root@SaltWorks-Stage-Web-1
+            #
+            #
             #
             #Run Flush_Redis_Cache function
              Flush_Redis_Cache;
