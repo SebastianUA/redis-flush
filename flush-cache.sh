@@ -169,7 +169,7 @@ function Flush_Memcached () {
         echo "Memcached Server => `echo $MemcachedServer`";
         echo "Memcached Port => `echo $MemcachedPort`";
         $SETCOLOR_NORMAL    
-if [  !-z "$MemcachedServer|$MemcachedPort" ]; then
+if [ ! -z "$MemcachedServer|$MemcachedPort" ]; then
          `which expect | grep -E expect` <<EOF
                 spawn telnet $MemcachedServer $MemcachedPort
                 expect "Escape character is '^]'."
