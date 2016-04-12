@@ -70,13 +70,6 @@ fi
 
 function Flush_Redis_Cache () {
     #
-    RootF=$(cat /etc/nginx/conf.d/*.conf | grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|-f)"|uniq)
-    if [ -z "$RootF" ]; then
-        $SETCOLOR_TITLE
-        echo "No such file or directory (nginx)";
-        $SETCOLOR_NORMAL
-        #cat: /etc/nginx/conf.d/*.conf: No such file or directory 
-    fi 
     # check redis IP
      CacheRedisIP=$(cat $LocalXML| grep Cache_Backend_Redis -A13 | grep "<server>"| uniq|cut -d ">" -f2 | cut -d "<" -f1|uniq)
       if [ -z "$CacheRedisIP" ]; then
@@ -184,7 +177,14 @@ else
                 $SETCOLOR_NORMAL
         fi
 }
-
+#
+RootF=$(cat /etc/nginx/conf.d/*.conf | grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|-f)"|uniq)
+if [ -z "$RootF" ]; then
+        $SETCOLOR_TITLE
+        echo "No such file or directory (nginx)";
+        $SETCOLOR_NORMAL
+        #cat: /etc/nginx/conf.d/*.conf: No such file or directory 
+fi 
 for Roots in `echo $RootF|xargs -I{} -n1 echo {}` ; do
     $SETCOLOR_TITLE
     echo "Root-folder: `echo $Roots`";
