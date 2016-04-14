@@ -13,6 +13,7 @@ SETCOLOR_FAILURE="echo -en \\033[1;31m"
 SETCOLOR_NORMAL="echo -en \\033[0;39m"
 
 SETCOLOR_TITLE="echo -en \\033[1;36m" #Fuscia
+SETCOLOR_TITLE_GREEN="echo -en \\033[0;32m" #green
 SETCOLOR_NUMBERS="echo -en \\033[0;34m" #BLUE
 
 function Operation_status {
@@ -69,9 +70,11 @@ else
 fi
 
 function Flush_Redis_Cache () {
+    $SETCOLOR_TITLE_GREEN
     echo "**********************************************";
     echo "********************REDIS*********************";
-    echo "**********************************************";  
+    echo "**********************************************";
+    $SETCOLOR_NORMAL  
     #
     # check redis IP
      CacheRedisIP=$(cat $LocalXML| grep Cache_Backend_Redis -A13 | grep "<server>"| uniq|cut -d ">" -f2 | cut -d "<" -f1|uniq)
@@ -123,7 +126,6 @@ if [ ! -z "$CacheRedisIP|$CacheRedisPorts|$CacheRedisDB" ]; then
                                     #
                                     Flush_CacheRedisDB="flushdb";
                                     Close_Expect_with_CacheRedis="quit";
-                                    MONITOR="KEYS *";
                                     Close_connection="Connection will be CLOSED now!"
                                     #
                                     #`which expect| grep -E expect`<< EOF
@@ -135,6 +137,7 @@ if [ ! -z "$CacheRedisIP|$CacheRedisPorts|$CacheRedisDB" ]; then
                                             send "$Flush_CacheRedisDB\n"
                                             expect "+OK"
                                             sleep 3
+                                            send "$Close_connection\n"
                                             send "$Close_Expect_with_CacheRedis\n"
 EOF
                                 done;     
@@ -150,17 +153,19 @@ EOF
     #
 else
      #rm -rf
-     echo "NEED TO RUN <rm -rf $Roots/var/cache/*> "; 
+     echo "NEED TO RUN <rm -rf '$Cache_Dir'"; 
 fi		 
 } 
 
 function Flush_Memcached () {
         #MEMCACHED
+        $SETCOLOR_TITLE_GREEN
         echo "**********************************************";
         echo "******************MEMCACHED*******************";
         echo "**********************************************";
-         MemcachedServer=$(cat `echo $LocalXML`| grep '<memcached>' -A7| grep -E 'host|CDATA|port' | grep -v "ersistent"| grep host| cut -d "[" -f3| cut -d "]" -f1|uniq)
-         MemcachedPort=$(cat `echo $LocalXML`| grep '<memcached>' -A7| grep -E 'host|CDATA|port' | grep -v "ersistent"| grep port| cut -d "[" -f3| cut -d "]" -f1|uniq)
+        $SETCOLOR_NORMAL
+        MemcachedServer=$(cat `echo $LocalXML`| grep '<memcached>' -A7| grep -E 'host|CDATA|port' | grep -v "ersistent"| grep host| cut -d "[" -f3| cut -d "]" -f1|uniq)
+        MemcachedPort=$(cat `echo $LocalXML`| grep '<memcached>' -A7| grep -E 'host|CDATA|port' | grep -v "ersistent"| grep port| cut -d "[" -f3| cut -d "]" -f1|uniq)
         
         Close_Expect_with_Memcached="quit"
         Flush_Memcached="flush_all"
@@ -169,7 +174,7 @@ function Flush_Memcached () {
         echo "Memcached Server => `echo $MemcachedServer`";
         echo "Memcached Port => `echo $MemcachedPort`";
         $SETCOLOR_NORMAL    
-if [ ! -z "$MemcachedServer|$MemcachedPort" ]; then
+if [ ! -z "$MemcachedServer" ]; then
          `which expect | grep -E expect` <<EOF
                 spawn telnet $MemcachedServer $MemcachedPort
                 expect "Escape character is '^]'."
@@ -185,6 +190,7 @@ else
         $SETCOLOR_TITLE
         echo "Din't find memcached on server `hostname`";
         $SETCOLOR_NORMAL
+        break;
 fi
 }
 #
@@ -212,12 +218,11 @@ for Roots in `echo $RootF|xargs -I{} -n1 echo {}` ; do
             echo "Root-XML with '/' : `echo $LocalXML`";
             $SETCOLOR_NORMAL
             #
-            #
             # if [$LocalXML = "* No such file or directory *" ] then ->>>>>
             #root@SaltWorks-Stage-Web-1
             #
-            #
-            #
+            Var_Cache="var/cache/*";
+            Cache_Dir="$Roots$Var_Cache"
             #Run Flush_Redis_Cache function
              Flush_Redis_Cache;
             #Run Flush_Memcached function
@@ -227,6 +232,7 @@ for Roots in `echo $RootF|xargs -I{} -n1 echo {}` ; do
           $SETCOLOR_TITLE
           echo "Root-XML: `echo $LocalXML`";
           $SETCOLOR_NORMAL
+          Cache_Dir="$Roots/var/cache/*"
           #Run Flush_Redis_Cache function
            Flush_Redis_Cache;
           #Run Flush_Memcached function
