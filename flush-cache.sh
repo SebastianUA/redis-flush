@@ -84,7 +84,7 @@ function Flush_Redis_Cache () {
       echo "Cache Redis server/IP: `echo $CacheRedisIP 2> /dev/null`";
       #
       #PORTS
-       CacheRedisPorts=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13 | grep port | cut -d ">" -f2 |cut -d "<" -f1|uniq| grep -Ev "gzip")
+       CacheRedisPorts=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13  | cut -d '>' -f2| grep port | cut -d '<' -f1|uniq)
        if [ -z "$CacheRedisPorts" ]; then
        			CacheRedisPorts=$(cat `echo $LocalXML 2> /dev/null` |grep Cache_Backend_Redis -A13 | grep port | cut -d "[" -f3| cut -d "]" -f1|uniq| grep -Ev "gzip")
        fi		
@@ -206,7 +206,8 @@ fi
 RootF=$(cat /etc/nginx/conf.d/*.conf 2> /dev/null| grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|-f)"|uniq| grep -v "blog")
 if [ -z "$RootF" ]; then
         $SETCOLOR_TITLE
-        echo "No such file or directory (nginx)";
+        echo "No such file or directory (default for nginx)";
+        RootF=$(cat /etc/httpd/conf.d/vhosts/*.conf 2> /dev/null | grep DocumentRoot| cut -d '"' -f2|uniq| grep -v "blog")
         $SETCOLOR_NORMAL
         #cat: /etc/nginx/conf.d/*.conf: No such file or directory 
 fi 
