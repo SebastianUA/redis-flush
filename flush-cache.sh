@@ -77,18 +77,18 @@ function Flush_Redis_Cache () {
     $SETCOLOR_NORMAL  
     #
     # check redis IP
-     CacheRedisIP=$(cat $LocalXML| grep Cache_Backend_Redis -A13 | grep "<server>"| uniq|cut -d ">" -f2 | cut -d "<" -f1|uniq)
+     CacheRedisIP=$(cat $LocalXML 2> /dev/null| grep Cache_Backend_Redis -A13 | grep "<server>"| uniq|cut -d ">" -f2 | cut -d "<" -f1|uniq)
       if [ -z "$CacheRedisIP" ]; then
-               CacheRedisIP=$(cat $LocalXML| grep Cache_Backend_Redis -A13| grep "<server>"|uniq|cut -d "[" -f3| cut -d "]" -f1|uniq) 
+               CacheRedisIP=$(cat $LocalXML 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"|uniq|cut -d "[" -f3| cut -d "]" -f1|uniq) 
       fi                      
-      echo "Cache Redis server/IP: `echo $CacheRedisIP`";
+      echo "Cache Redis server/IP: `echo $CacheRedisIP 2> /dev/null`";
       #
       #PORTS
-       CacheRedisPorts=$(cat `echo $LocalXML`| grep Cache_Backend_Redis -A13 | grep port | cut -d ">" -f2 |cut -d "<" -f1|uniq| grep -Ev "gzip")
+       CacheRedisPorts=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13 | grep port | cut -d ">" -f2 |cut -d "<" -f1|uniq| grep -Ev "gzip")
        if [ -z "$CacheRedisPorts" ]; then
-       			CacheRedisPorts=$(cat `echo $LocalXML`|grep Cache_Backend_Redis -A13 | grep port | cut -d "[" -f3| cut -d "]" -f1|uniq| grep -Ev "gzip")
+       			CacheRedisPorts=$(cat `echo $LocalXML 2> /dev/null` |grep Cache_Backend_Redis -A13 | grep port | cut -d "[" -f3| cut -d "]" -f1|uniq| grep -Ev "gzip")
        fi		
-       echo "Cache-redis-ports: `echo $CacheRedisPorts`";
+       echo "Cache-redis-ports: `echo $CacheRedisPorts 2> /dev/null`";
       # PS 6381 - don't flush
         IgnoreCacheRedisPorts="6381"
       #
@@ -102,16 +102,20 @@ function Flush_Redis_Cache () {
       # -n : string is not null.
       # -z : string is null, that is, has zero length
 if [ ! -z "$CacheRedisIP|$CacheRedisPorts|$CacheRedisDB" ]; then 
-    for ICacheRedisIP in `echo $CacheRedisIP|xargs -I{} -n1 echo {}` ; do
+    for ICacheRedisIP in `echo $CacheRedisIP|xargs -I{} -n1 echo {} | grep -v "blog"` ; do
             echo "Cache Redis server: `echo $ICacheRedisIP`";
             for ICacheRedisPorts in `echo $CacheRedisPorts|xargs -I{} -n1 echo {}` ; do
                 if [ "$ICacheRedisPorts" -ne "$IgnoreCacheRedisPorts" ]; then
                          #
                          if [ -z "$CacheRedisDB" ]; then
+                            #
+                            # ./flush-cache.sh: line 111: redis-cli: command not found
                              R_flush=$(redis-cli -h `echo $ICacheRedisIP` -p `echo $ICacheRedisPorts` flushall)
                              $SETCOLOR_TITLE
                              echo "redis-cli -h `echo $ICacheRedisIP` -p `echo $ICacheRedisPorts` flushall";
                              $SETCOLOR_NORMAL
+                            #
+                            # 
                           else
                                 #flush_db
                                 $SETCOLOR_TITLE
@@ -164,8 +168,8 @@ function Flush_Memcached () {
         echo "******************MEMCACHED*******************";
         echo "**********************************************";
         $SETCOLOR_NORMAL
-        MemcachedServer=$(cat `echo $LocalXML`| grep '<memcached>' -A7| grep -E 'host|CDATA|port' | grep -v "ersistent"| grep host| cut -d "[" -f3| cut -d "]" -f1|uniq)
-        MemcachedPort=$(cat `echo $LocalXML`| grep '<memcached>' -A7| grep -E 'host|CDATA|port' | grep -v "ersistent"| grep port| cut -d "[" -f3| cut -d "]" -f1|uniq)
+        MemcachedServer=$(cat `echo $LocalXML` 2> /dev/null | grep '<memcached>' -A7| grep -E 'host|CDATA|port' | grep -v "ersistent"| grep host| cut -d "[" -f3| cut -d "]" -f1|uniq)
+        MemcachedPort=$(cat `echo $LocalXML` 2> /dev/null | grep '<memcached>' -A7| grep -E 'host|CDATA|port' | grep -v "ersistent"| grep port| cut -d "[" -f3| cut -d "]" -f1|uniq)
         
         Close_Expect_with_Memcached="quit"
         Flush_Memcached="flush_all"
@@ -193,6 +197,11 @@ else
         break;
 fi
 }
+#
+#
+#
+#[root@garrett-stage-admin-1 garrett-aws-stage.gemshelp.com]# pwd
+#/var/www/html/garrett-aws-stage.gemshelp.com
 #
 RootF=$(cat /etc/nginx/conf.d/*.conf | grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|-f)"|uniq)
 if [ -z "$RootF" ]; then
