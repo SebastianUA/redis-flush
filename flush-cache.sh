@@ -101,7 +101,8 @@ function Flush_Redis_Cache () {
       #
       # -n : string is not null.
       # -z : string is null, that is, has zero length
-if [ ! -z "$CacheRedisIP|$CacheRedisPorts|$CacheRedisDB" ]; then 
+      #|$CacheRedisPorts|$CacheRedisDB
+if [ ! -z "$CacheRedisIP" ]; then 
     for ICacheRedisIP in `echo $CacheRedisIP|xargs -I{} -n1 echo {}` ; do
             echo "Cache Redis server: `echo $ICacheRedisIP`";
             for ICacheRedisPorts in `echo $CacheRedisPorts|xargs -I{} -n1 echo {}` ; do
@@ -162,8 +163,14 @@ EOF
     #
 else
      #rm -rf
-     echo "NEED TO RUN <rm -rf '$Cache_Dir'"; 
-fi		 
+     $SETCOLOR_TITLE
+     echo "Local Cache on server `hostname`";
+     $SETCOLOR_NORMAL
+     `rm -rf echo $Cache_Dir`
+     $SETCOLOR_TITLE
+     echo "LOCAL CACHE with command <rm -rf '$Cache_Dir' has been FLUSHED";
+     $SETCOLOR_NORMAL 
+fi	 	 
 } 
 
 function Flush_Memcached () {
