@@ -77,9 +77,9 @@ function Flush_Redis_Cache () {
     $SETCOLOR_NORMAL  
     #
     # check redis IP
-     CacheRedisIP=$(cat $LocalXML 2> /dev/null| grep Cache_Backend_Redis -A13 | grep "<server>"| uniq|cut -d ">" -f2 | cut -d "<" -f1|uniq)
+     CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13 | grep "<server>"| uniq|cut -d ">" -f2 | cut -d "<" -f1|uniq)
       if [ -z "$CacheRedisIP" ]; then
-               CacheRedisIP=$(cat $LocalXML 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"|uniq|cut -d "[" -f3| cut -d "]" -f1|uniq) 
+               CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"|uniq|cut -d "[" -f3| cut -d "]" -f1|uniq) 
       fi                      
       echo "Cache Redis server/IP: `echo $CacheRedisIP 2> /dev/null`";
       #
@@ -96,13 +96,13 @@ function Flush_Redis_Cache () {
       # redis-cli -h 127.0.0.1 -p 6379 flushall   (cache)
       # redis-cli -h 127.0.0.1 -p 6380 flushall    (full_page_cache)
       #Check_DB
-       CacheRedisDB=$(cat `echo $LocalXML`| grep Cache_Backend_Redis -A13 | grep database | cut -d ">" -f2 |cut -d "<" -f1|uniq)
-       echo "CacheRedisDB = `echo $CacheRedisDB`"
+       CacheRedisDB=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13 | grep database | cut -d ">" -f2 |cut -d "<" -f1|uniq)
+       echo "CacheRedisDB = `echo $CacheRedisDB 2> /dev/null`"
       #
       # -n : string is not null.
       # -z : string is null, that is, has zero length
 if [ ! -z "$CacheRedisIP|$CacheRedisPorts|$CacheRedisDB" ]; then 
-    for ICacheRedisIP in `echo $CacheRedisIP|xargs -I{} -n1 echo {} | grep -v "blog"` ; do
+    for ICacheRedisIP in `echo $CacheRedisIP|xargs -I{} -n1 echo {}` ; do
             echo "Cache Redis server: `echo $ICacheRedisIP`";
             for ICacheRedisPorts in `echo $CacheRedisPorts|xargs -I{} -n1 echo {}` ; do
                 if [ "$ICacheRedisPorts" -ne "$IgnoreCacheRedisPorts" ]; then
@@ -173,12 +173,12 @@ function Flush_Memcached () {
         
         Close_Expect_with_Memcached="quit"
         Flush_Memcached="flush_all"
-
+  
+if [ ! -z "$MemcachedServer" ]; then
         $SETCOLOR_TITLE
         echo "Memcached Server => `echo $MemcachedServer`";
         echo "Memcached Port => `echo $MemcachedPort`";
-        $SETCOLOR_NORMAL    
-if [ ! -z "$MemcachedServer" ]; then
+        $SETCOLOR_NORMAL  
          `which expect | grep -E expect` <<EOF
                 spawn telnet $MemcachedServer $MemcachedPort
                 expect "Escape character is '^]'."
@@ -203,7 +203,7 @@ fi
 #[root@garrett-stage-admin-1 garrett-aws-stage.gemshelp.com]# pwd
 #/var/www/html/garrett-aws-stage.gemshelp.com
 #
-RootF=$(cat /etc/nginx/conf.d/*.conf | grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|-f)"|uniq)
+RootF=$(cat /etc/nginx/conf.d/*.conf 2> /dev/null| grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|-f)"|uniq| grep -v "blog")
 if [ -z "$RootF" ]; then
         $SETCOLOR_TITLE
         echo "No such file or directory (nginx)";
