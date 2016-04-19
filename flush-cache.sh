@@ -108,14 +108,19 @@ if [ ! -z "$CacheRedisIP|$CacheRedisPorts|$CacheRedisDB" ]; then
                 if [ "$ICacheRedisPorts" -ne "$IgnoreCacheRedisPorts" ]; then
                          #
                          if [ -z "$CacheRedisDB" ]; then
-                            #
-                            # ./flush-cache.sh: line 111: redis-cli: command not found
-                             R_flush=$(redis-cli -h `echo $ICacheRedisIP` -p `echo $ICacheRedisPorts` flushall)
-                             $SETCOLOR_TITLE
-                             echo "redis-cli -h `echo $ICacheRedisIP` -p `echo $ICacheRedisPorts` flushall";
-                             $SETCOLOR_NORMAL
-                            #
-                            # 
+                                #
+                                if [ ! -n "`whereis redis-cli| awk '{print $2}'`" ]; then
+                                    #    
+                                    # ./flush-cache.sh: line 111: redis-cli: command not found
+                                    R_flush=$(redis-cli -h `echo $ICacheRedisIP` -p `echo $ICacheRedisPorts` flushall)
+                                    $SETCOLOR_TITLE
+                                    echo "redis-cli -h `echo $ICacheRedisIP` -p `echo $ICacheRedisPorts` flushall";
+                                    $SETCOLOR_NORMAL
+                                    #
+                                    #
+                                 else
+                                      echo "PLEASE USE TELNET!";
+                                 fi           
                           else
                                 #flush_db
                                 $SETCOLOR_TITLE
@@ -197,11 +202,6 @@ else
         break;
 fi
 }
-#
-#
-#
-#[root@garrett-stage-admin-1 garrett-aws-stage.gemshelp.com]# pwd
-#/var/www/html/garrett-aws-stage.gemshelp.com
 #
 RootF=$(cat /etc/nginx/conf.d/*.conf 2> /dev/null| grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|-f)"|uniq| grep -v "blog")
 if [ -z "$RootF" ]; then
