@@ -114,25 +114,10 @@ if [ ! -z "$CacheRedisIP" ]; then
                                 #
                                 if [ -n "`whereis redis-cli| awk '{print $2}'`" ]; then
                                     #    
-                                    # ./flush-cache.sh: line 111: redis-cli: command not found
-                                    # CareFusion-Prod-Admin-1
-                                    #[root@CareFusion-Prod-Admin-1 catalog.carefusion.com]# telnet carefusion-prod-db-2 6379
-                                    #Trying 172.80.22.127...
-                                    #Connected to carefusion-prod-db-2.
-                                    #Escape character is '^]'.
-                                    #flushall
-                                    #+OK
-                                    #quit
-                                    #+OK
-                                    #Connection closed by foreign host.
-                                    #[root@CareFusion-Prod-Admin-1 catalog.carefusion.com]#
-
                                     R_flush=$(redis-cli -h `echo $ICacheRedisIP` -p `echo $ICacheRedisPorts` flushall)
                                     $SETCOLOR_TITLE
                                     echo "redis-cli -h `echo $ICacheRedisIP` -p `echo $ICacheRedisPorts` flushall";
                                     $SETCOLOR_NORMAL
-                                    #
-                                    #
                                  else
                                       echo "PLEASE USE TELNET!";
                                       #
@@ -162,24 +147,50 @@ EOF
                                     echo "`echo $Server_port` DataBase::::> `echo $ICacheRedisDB`";
                                     $SETCOLOR_NORMAL
                                     #
-                                    Flush_CacheRedisDB="flushdb";
-                                    Close_Expect_with_CacheRedis="quit";
-                                    Close_connection="Connection will be CLOSED now!";
-                                    #
                                     # [root@cloud-devuat-01 stjohnknits.gemshelp.com]#
-                                    # -NOAUTH Authentication required.
-                                    #`which expect| grep -E expect`<< EOF
-                                    expect <<EOF 
-                                            spawn telnet $ICacheRedisIP $ICacheRedisPorts
-                                            expect "Escape character is '^]'."
-                                            send "SELECT $ICacheRedisDB\n"
-                                            expect "+OK"
-                                            send "$Flush_CacheRedisDB\n"
-                                            expect "+OK"
-                                            sleep 3
-                                            send "$Close_connection\n"
-                                            send "$Close_Expect_with_CacheRedis\n"
+                                    # 
+                                    CacheRedisDBAuth=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13 | grep password | cut -d ">" -f2 |cut -d "<" -f1|uniq)
+                                    if [ -z "$CacheRedisDBAuth" ]; then
+                                            Flush_CacheRedisDB="flushdb";
+                                            Close_Expect_with_CacheRedis="quit";
+                                            Close_connection="Connection will be CLOSED now!";
+                                            #
+                                            #`which expect| grep -E expect`<< EOF
+                                            expect <<EOF 
+                                                spawn telnet $ICacheRedisIP $ICacheRedisPorts
+                                                expect "Escape character is '^]'."
+                                                send "SELECT $ICacheRedisDB\n"
+                                                expect "+OK"
+                                                send "$Flush_CacheRedisDB\n"
+                                                expect "+OK"
+                                                sleep 3
+                                                send "$Close_connection\n"
+                                                send "$Close_Expect_with_CacheRedis\n"                                             
 EOF
+                                    else
+                                        $SETCOLOR_TITLE
+                                        echo "-NOAUTH Authentication required.";
+                                        $SETCOLOR_NORMAL
+                                        for ICacheRedisDBAuth in `echo $CacheRedisDBAuth|xargs -I{} -n1 echo {}` ; do
+                                                Flush_CacheRedisDB="flushdb";
+                                                Close_Expect_with_CacheRedis="quit";
+                                                Close_connection="Connection will be CLOSED now!";
+                                                #
+                                                expect <<EOF 
+                                                    spawn telnet $ICacheRedisIP $ICacheRedisPorts
+                                                    expect "Escape character is '^]'."
+                                                    send "AUTH $ICacheRedisDBAuth\n"
+                                                    expect "+OK"
+                                                    send "SELECT $ICacheRedisDB\n"
+                                                    expect "+OK"
+                                                    send "$Flush_CacheRedisDB\n"
+                                                    expect "+OK"
+                                                    sleep 3
+                                                    send "$Close_connection\n"
+                                                    send "$Close_Expect_with_CacheRedis\n"                                             
+EOF
+                                        done;
+                                    fi    
                                 done;     
                           fi         
                 else
