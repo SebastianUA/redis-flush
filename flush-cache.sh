@@ -102,7 +102,9 @@ function Flush_Redis_Cache () {
       # -n : string is not null.
       # -z : string is null, that is, has zero length
       #|$CacheRedisPorts|$CacheRedisDB
-if [ ! -z "$CacheRedisIP" ]; then 
+if [ ! -z "$CacheRedisIP" ]; then
+    # recursiv circules
+    # root@NatchezSS-Stage-Web-1 
     for ICacheRedisIP in `echo $CacheRedisIP|xargs -I{} -n1 echo {}` ; do
             echo "Cache Redis server: `echo $ICacheRedisIP`";
             for ICacheRedisPorts in `echo $CacheRedisPorts|xargs -I{} -n1 echo {}` ; do
@@ -110,9 +112,21 @@ if [ ! -z "$CacheRedisIP" ]; then
                          #
                          if [ -z "$CacheRedisDB" ]; then
                                 #
-                                if [ ! -n "`whereis redis-cli| awk '{print $2}'`" ]; then
+                                if [ -n "`whereis redis-cli| awk '{print $2}'`" ]; then
                                     #    
                                     # ./flush-cache.sh: line 111: redis-cli: command not found
+                                    # CareFusion-Prod-Admin-1
+                                    #[root@CareFusion-Prod-Admin-1 catalog.carefusion.com]# telnet carefusion-prod-db-2 6379
+                                    #Trying 172.80.22.127...
+                                    #Connected to carefusion-prod-db-2.
+                                    #Escape character is '^]'.
+                                    #flushall
+                                    #+OK
+                                    #quit
+                                    #+OK
+                                    #Connection closed by foreign host.
+                                    #[root@CareFusion-Prod-Admin-1 catalog.carefusion.com]#
+
                                     R_flush=$(redis-cli -h `echo $ICacheRedisIP` -p `echo $ICacheRedisPorts` flushall)
                                     $SETCOLOR_TITLE
                                     echo "redis-cli -h `echo $ICacheRedisIP` -p `echo $ICacheRedisPorts` flushall";
@@ -121,6 +135,20 @@ if [ ! -z "$CacheRedisIP" ]; then
                                     #
                                  else
                                       echo "PLEASE USE TELNET!";
+                                      #
+                                      Flush_CacheRediss="flushall";
+                                      Close_Expect_with_CacheRediss="quit";
+                                      $SETCOLOR_TITLE
+                                      echo $ICacheRedisIP '+' $ICacheRedisPorts
+                                      $SETCOLOR_NORMAL
+                                      expect <<EOF 
+                                            spawn telnet $ICacheRedisIP $ICacheRedisPorts
+                                            expect "Escape character is '^]'."
+                                            send "$Flush_CacheRediss\n"
+                                            expect "+OK"
+                                            sleep 3
+                                            send "$Close_Expect_with_CacheRediss\n"
+EOF
                                  fi           
                           else
                                 #flush_db
@@ -136,8 +164,10 @@ if [ ! -z "$CacheRedisIP" ]; then
                                     #
                                     Flush_CacheRedisDB="flushdb";
                                     Close_Expect_with_CacheRedis="quit";
-                                    Close_connection="Connection will be CLOSED now!"
+                                    Close_connection="Connection will be CLOSED now!";
                                     #
+                                    # [root@cloud-devuat-01 stjohnknits.gemshelp.com]#
+                                    # -NOAUTH Authentication required.
                                     #`which expect| grep -E expect`<< EOF
                                     expect <<EOF 
                                             spawn telnet $ICacheRedisIP $ICacheRedisPorts
@@ -154,7 +184,6 @@ EOF
                           fi         
                 else
                      echo "Ops IgnoreCacheRedisPorts is '$IgnoreCacheRedisPorts' EXIT!";
-                     #exit;
                      break;
                 fi
                 echo "Flushed redis cache on $ICacheRedisPorts port";
@@ -168,7 +197,7 @@ else
      $SETCOLOR_NORMAL
      `rm -rf echo $Cache_Dir`
      $SETCOLOR_TITLE
-     echo "LOCAL CACHE with command <rm -rf '$Cache_Dir' has been FLUSHED";
+     echo "Using LOCAL CACHE with command <rm -rf '$Cache_Dir' has been FLUSHED";
      $SETCOLOR_NORMAL 
 fi	 	 
 } 
@@ -209,7 +238,7 @@ else
         break;
 fi
 }
-#
+# ToolBarn-Prod-Admin-1 not works
 RootF=$(cat /etc/nginx/conf.d/*.conf 2> /dev/null| grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|-f)"|uniq| grep -v "blog")
 if [ -z "$RootF" ]; then
         $SETCOLOR_TITLE
