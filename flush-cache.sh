@@ -103,8 +103,6 @@ function Flush_Redis_Cache () {
       # -z : string is null, that is, has zero length
       #|$CacheRedisPorts|$CacheRedisDB
 if [ ! -z "$CacheRedisIP" ]; then
-    # recursiv circules
-    # root@NatchezSS-Stage-Web-1 
     for ICacheRedisIP in `echo $CacheRedisIP|xargs -I{} -n1 echo {}` ; do
             echo "Cache Redis server: `echo $ICacheRedisIP`";
             for ICacheRedisPorts in `echo $CacheRedisPorts|xargs -I{} -n1 echo {}` ; do
@@ -146,8 +144,6 @@ EOF
                                     $SETCOLOR_TITLE
                                     echo "`echo $Server_port` DataBase::::> `echo $ICacheRedisDB`";
                                     $SETCOLOR_NORMAL
-                                    #
-                                    # [root@cloud-devuat-01 stjohnknits.gemshelp.com]#
                                     # 
                                     CacheRedisDBAuth=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13 | grep password | cut -d ">" -f2 |cut -d "<" -f1|uniq)
                                     if [ -z "$CacheRedisDBAuth" ]; then
