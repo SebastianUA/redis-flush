@@ -245,7 +245,7 @@ else
         break;
 fi
 }
-# ToolBarn-Prod-Admin-1 not works
+
 RootF=$(cat /etc/nginx/conf.d/*.conf 2> /dev/null| grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|-f)"|uniq| grep -v "blog")
 if [ -z "$RootF" ]; then
         $SETCOLOR_TITLE
@@ -270,10 +270,7 @@ for Roots in `echo $RootF|xargs -I{} -n1 echo {}` ; do
             $SETCOLOR_TITLE
             echo "Root-XML with '/' : `echo $LocalXML`";
             $SETCOLOR_NORMAL
-            #
-            # if [$LocalXML = "* No such file or directory *" ] then ->>>>>
-            #root@SaltWorks-Stage-Web-1
-            #
+            #  
             Var_Cache="var/cache/*";
             Cache_Dir="$Roots$Var_Cache"
             #Run Flush_Redis_Cache function
