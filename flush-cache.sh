@@ -30,7 +30,7 @@ function Operation_status {
      fi
 }
 
-# LOGS
+# LOG
 FlushCacheReport="/var/log/FlushCacheReport.log"
 if [ ! -f "$FlushCacheReport" ]; then
     $SETCOLOR_TITLE
@@ -48,7 +48,7 @@ else
     $SETCOLOR_NORMAL
 fi
 
-# Receiver email for Unknown_malewares.log and reports
+# Receiver email for reports
  List_of_emails="vnatarov@gorillagroup.com"
 
 exec > >(tee -a ${FlushCacheReport} )
@@ -101,7 +101,6 @@ function Flush_Redis_Cache () {
       #
       # -n : string is not null.
       # -z : string is null, that is, has zero length
-      #|$CacheRedisPorts|$CacheRedisDB
 if [ ! -z "$CacheRedisIP" ]; then
     for ICacheRedisIP in `echo $CacheRedisIP|xargs -I{} -n1 echo {}` ; do
             echo "Cache Redis server: `echo $ICacheRedisIP`";
@@ -165,7 +164,7 @@ EOF
 EOF
                                     else
                                         $SETCOLOR_TITLE
-                                        echo "-NOAUTH Authentication required.";
+                                        echo "AUTH Authentication required.";
                                         $SETCOLOR_NORMAL
                                         for ICacheRedisDBAuth in `echo $CacheRedisDBAuth|xargs -I{} -n1 echo {}` ; do
                                                 Flush_CacheRedisDB="flushdb";
@@ -190,7 +189,7 @@ EOF
                                 done;     
                           fi         
                 else
-                     echo "Ops IgnoreCacheRedisPorts is '$IgnoreCacheRedisPorts' EXIT!";
+                     echo "Oops IgnoreCacheRedisPorts is '$IgnoreCacheRedisPorts' EXIT!";
                      break;
                 fi
                 echo "Flushed redis cache on $ICacheRedisPorts port";
@@ -245,26 +244,28 @@ else
         break;
 fi
 }
-
-RootF=$(cat /etc/nginx/conf.d/*.conf 2> /dev/null| grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|-f)"|uniq| grep -v "blog")
-if [ -z "$RootF" ]; then
+#
+for Iconfig in `ls -al /etc/nginx/conf.d/*.conf | grep "^-"| grep -v "default"| grep -v "geo"| grep -v "example"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
+    #RootF=$(cat /etc/nginx/conf.d/*.conf 2> /dev/null| grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|-f)"|uniq| grep -v "blog")
+    RootF=$(cat $Iconfig 2> /dev/null| grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|log|-f)"|uniq| grep -v "blog")    
+    if [ -z "$RootF" ]; then
         $SETCOLOR_TITLE
         echo "No such file or directory (default for nginx)";
         RootF=$(cat /etc/httpd/conf.d/vhosts/*.conf 2> /dev/null | grep DocumentRoot| cut -d '"' -f2|uniq| grep -v "blog")
         $SETCOLOR_NORMAL
         #cat: /etc/nginx/conf.d/*.conf: No such file or directory 
-fi 
-for Roots in `echo $RootF|xargs -I{} -n1 echo {}` ; do
-    $SETCOLOR_TITLE
-    echo "Root-folder: `echo $Roots`";
-    $SETCOLOR_NORMAL
-    #
-    # if last symbol is "/" then need to delete it!
-    # $ a=123
-    # $ echo "${a::-1}"
-    #   12
-    #
-     if [[ "$Roots" == */ ]]; then
+    fi 
+    for Roots in `echo $RootF|xargs -I{} -n1 echo {}` ; do
+        $SETCOLOR_TITLE
+        echo "Root-folder: `echo $Roots`";
+        $SETCOLOR_NORMAL
+        #
+        # if last symbol is "/" then need to delete it!
+        # $ a=123
+        # $ echo "${a::-1}"
+        #   12
+        #
+        if [[ "$Roots" == */ ]]; then
             XML="app/etc/local.xml";
             LocalXML="$Roots$XML"
             $SETCOLOR_TITLE
@@ -277,7 +278,7 @@ for Roots in `echo $RootF|xargs -I{} -n1 echo {}` ; do
              Flush_Redis_Cache;
             #Run Flush_Memcached function
              Flush_Memcached;
-     else
+        else
           LocalXML="$Roots/app/etc/local.xml"
           $SETCOLOR_TITLE
           echo "Root-XML: `echo $LocalXML`";
@@ -288,7 +289,9 @@ for Roots in `echo $RootF|xargs -I{} -n1 echo {}` ; do
           #Run Flush_Memcached function
            Flush_Memcached;
      fi     
+  done;
 done;
+#
 # Send report to email list
 if [ -z "`rpm -qa | grep mailx`" ]; then
 	yum install mailx -y
