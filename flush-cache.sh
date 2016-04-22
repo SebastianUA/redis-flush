@@ -245,50 +245,61 @@ else
 fi
 }
 #
-for Iconfig in `ls -al /etc/nginx/conf.d/*.conf | grep "^-"| grep -v "default"| grep -v "geo"| grep -v "example"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
+for Iconfig in `ls -al /etc/nginx/conf.d/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
     #RootF=$(cat /etc/nginx/conf.d/*.conf 2> /dev/null| grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|-f)"|uniq| grep -v "blog")
+    #
     RootF=$(cat $Iconfig 2> /dev/null| grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|log|-f)"|uniq| grep -v "blog")    
-    if [ -z "$RootF" ]; then
-        $SETCOLOR_TITLE
-        echo "No such file or directory (default for nginx)";
-        RootF=$(cat /etc/httpd/conf.d/vhosts/*.conf 2> /dev/null | grep DocumentRoot| cut -d '"' -f2|uniq| grep -v "blog")
-        $SETCOLOR_NORMAL
-        #cat: /etc/nginx/conf.d/*.conf: No such file or directory 
-    fi 
+    #if [ -z "$RootF" ]; then
+    #    $SETCOLOR_TITLE
+    #    echo "No such file or directory (default for nginx)";
+    #    RootF=$(cat /etc/httpd/conf.d/vhosts/*.conf 2> /dev/null | grep DocumentRoot| cut -d '"' -f2|uniq| grep -v "blog")
+    #    $SETCOLOR_NORMAL
+    #    #cat: /etc/nginx/conf.d/*.conf: No such file or directory 
+    #fi
+    # 
+    # need to add a `echo $RootF >> RootF.log` 
+    #
     for Roots in `echo $RootF|xargs -I{} -n1 echo {}` ; do
-        $SETCOLOR_TITLE
-        echo "Root-folder: `echo $Roots`";
-        $SETCOLOR_NORMAL
         #
-        # if last symbol is "/" then need to delete it!
-        # $ a=123
-        # $ echo "${a::-1}"
-        #   12
-        #
-        if [[ "$Roots" == */ ]]; then
-            XML="app/etc/local.xml";
-            LocalXML="$Roots$XML"
-            $SETCOLOR_TITLE
-            echo "Root-XML with '/' : `echo $LocalXML`";
-            $SETCOLOR_NORMAL
-            #  
-            Var_Cache="var/cache/*";
-            Cache_Dir="$Roots$Var_Cache"
-            #Run Flush_Redis_Cache function
-             Flush_Redis_Cache;
-            #Run Flush_Memcached function
-             Flush_Memcached;
-        else
-          LocalXML="$Roots/app/etc/local.xml"
-          $SETCOLOR_TITLE
-          echo "Root-XML: `echo $LocalXML`";
-          $SETCOLOR_NORMAL
-          Cache_Dir="$Roots/var/cache/*"
-          #Run Flush_Redis_Cache function
-           Flush_Redis_Cache;
-          #Run Flush_Memcached function
-           Flush_Memcached;
-     fi     
+        #Domain_Name=$()
+        if [ ! -z "$Roots" ]; then
+          #
+          echo "-----------------------------------------------------------";
+          echo "--------------------------SITE-----------------------------";
+          echo "-----------------------------------------------------------";
+          if [[ "$Roots" == */ ]]; then 
+              $SETCOLOR_TITLE
+              echo "Root-folder: `echo $Roots| grep -vE "DocumentRoot" 2> /dev/null`";
+              $SETCOLOR_NORMAL
+              #   
+              XML="app/etc/local.xml";
+              LocalXML="$Roots$XML"
+              $SETCOLOR_TITLE
+              echo "Root-XML with '/' : `echo $LocalXML| grep -vE "DocumentRoot"`";
+              $SETCOLOR_NORMAL
+              #  
+              Var_Cache="var/cache/*";
+              Cache_Dir="$Roots$Var_Cache"
+              #Run Flush_Redis_Cache function
+              Flush_Redis_Cache;
+              #Run Flush_Memcached function
+              Flush_Memcached;
+          else
+                LocalXML="$Roots/app/etc/local.xml"
+                $SETCOLOR_TITLE
+                echo "Root-folder: `echo $Roots| grep -vE "DocumentRoot" 2> /dev/null`";
+                $SETCOLOR_NORMAL
+                #
+                $SETCOLOR_TITLE
+                echo "Root-XML: `echo $LocalXML`";
+                $SETCOLOR_NORMAL
+                Cache_Dir="$Roots/var/cache/*"
+                #Run Flush_Redis_Cache function
+                Flush_Redis_Cache;
+                #Run Flush_Memcached function
+                Flush_Memcached;
+          fi 
+        fi   
   done;
 done;
 #
