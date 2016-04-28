@@ -30,7 +30,7 @@ function Operation_status {
      fi
 }
 
-# LOG
+# LOGs
 FlushCacheReport="/var/log/FlushCacheReport.log"
 if [ ! -f "$FlushCacheReport" ]; then
     $SETCOLOR_TITLE
@@ -45,6 +45,22 @@ else
     echo "The '$FlushCacheReport' file allready exists"
     rm -f $FlushCacheReport
     touch $FlushCacheReport
+    $SETCOLOR_NORMAL
+fi
+RootFolder="/var/log/RootFolder.log"
+if [ ! -f "$RootFolder" ]; then
+    $SETCOLOR_TITLE
+    echo "The RootFolder.log file NOT FOUND in the folder /var/log";
+    $SETCOLOR_NORMAL
+    touch $RootFolder
+    $SETCOLOR_TITLE
+    echo "The $RootFolder file was CREATED";
+    $SETCOLOR_NORMAL
+else
+    $SETCOLOR_TITLE
+    echo "The '$RootFolder' file allready exists"
+    rm -f $RootFolder
+    touch $RootFolder
     $SETCOLOR_NORMAL
 fi
 
@@ -86,8 +102,8 @@ function Flush_Redis_Cache () {
       #PORTS
        CacheRedisPorts=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13  | cut -d '>' -f2| grep port | cut -d '<' -f1|uniq)
        if [ -z "$CacheRedisPorts" ]; then
-       			CacheRedisPorts=$(cat `echo $LocalXML 2> /dev/null` |grep Cache_Backend_Redis -A13 | grep port | cut -d "[" -f3| cut -d "]" -f1|uniq| grep -Ev "gzip")
-       fi		
+            CacheRedisPorts=$(cat `echo $LocalXML 2> /dev/null` |grep Cache_Backend_Redis -A13 | grep port | cut -d "[" -f3| cut -d "]" -f1|uniq| grep -Ev "gzip")
+       fi   
        echo "Cache-redis-ports: `echo $CacheRedisPorts 2> /dev/null`";
       # PS 6381 - don't flush
         IgnoreCacheRedisPorts="6381"
@@ -205,7 +221,7 @@ else
      $SETCOLOR_TITLE
      echo "Using LOCAL CACHE with command <rm -rf '$Cache_Dir' has been FLUSHED";
      $SETCOLOR_NORMAL 
-fi	 	 
+fi     
 } 
 
 function Flush_Memcached () {
@@ -246,73 +262,70 @@ fi
 }
 #
 for Iconfig in `ls -al /etc/nginx/conf.d/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
-    #RootF=$(cat /etc/nginx/conf.d/*.conf 2> /dev/null| grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|-f)"|uniq| grep -v "blog")
-    #
-    RootF=$(cat $Iconfig 2> /dev/null| grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|log|-f)"|uniq| grep -v "blog")    
-    #if [ -z "$RootF" ]; then
+    RootF=$(cat $Iconfig 2> /dev/null| grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|log|-f)"|uniq| grep -vE "(blog|wp)")    
+    #if [ -n "$RootF" ]; then
     #    $SETCOLOR_TITLE
     #    echo "No such file or directory (default for nginx)";
     #    RootF=$(cat /etc/httpd/conf.d/vhosts/*.conf 2> /dev/null | grep DocumentRoot| cut -d '"' -f2|uniq| grep -v "blog")
     #    $SETCOLOR_NORMAL
     #    #cat: /etc/nginx/conf.d/*.conf: No such file or directory 
     #fi
-    # 
-    # need to add a `echo $RootF >> RootF.log` 
     #
     for Roots in `echo $RootF|xargs -I{} -n1 echo {}` ; do
-        #
-        #Domain_Name=$()
         if [ ! -z "$Roots" ]; then
           #
-          echo "-----------------------------------------------------------";
-          echo "--------------------------SITE-----------------------------";
-          echo "-----------------------------------------------------------";
-          if [[ "$Roots" == */ ]]; then 
-              $SETCOLOR_TITLE
-              echo "Root-folder: `echo $Roots| grep -vE "DocumentRoot" 2> /dev/null`";
-              $SETCOLOR_NORMAL
-              #   
-              XML="app/etc/local.xml";
-              LocalXML="$Roots$XML"
-              $SETCOLOR_TITLE
-              echo "Root-XML with '/' : `echo $LocalXML| grep -vE "DocumentRoot"`";
-              $SETCOLOR_NORMAL
-              #  
-              Var_Cache="var/cache/*";
-              Cache_Dir="$Roots$Var_Cache"
-              #Run Flush_Redis_Cache function
-              Flush_Redis_Cache;
-              #Run Flush_Memcached function
-              Flush_Memcached;
-          else
-                LocalXML="$Roots/app/etc/local.xml"
+          echo "$Roots" >> $RootFolder
+          sed -e 's/\s\+/\n/g' $RootFolder > $RootFolder-2
+          awk '!x[$0]++' $RootFolder-2 > $RootFolder
+        fi
+    done
+done
+#
+for IRootFolder in `cat $RootFolder|uniq` ; do
+        echo "-----------------------------------------------------------";
+        echo "--------------------------SITE-----------------------------";
+        echo "-----------------------------------------------------------";
+        if [[ "$IRootFolder" == */ ]]; then 
+                 $SETCOLOR_TITLE
+                 echo "Root-folder: `echo $IRootFolder| grep -vE "DocumentRoot" 2> /dev/null`";
+                 $SETCOLOR_NORMAL
+                 XML="app/etc/local.xml";
+                 LocalXML="$IRootFolder$XML"
+                 $SETCOLOR_TITLE
+                 echo "Root-XML with '/' : `echo $LocalXML| grep -vE "DocumentRoot"`";
+                 $SETCOLOR_NORMAL
+                 #  
+                 Var_Cache="var/cache/*";
+                 Cache_Dir="$IRootFolder$Var_Cache"
+        else
+                LocalXML="$IRootFolder/app/etc/local.xml"
                 $SETCOLOR_TITLE
-                echo "Root-folder: `echo $Roots| grep -vE "DocumentRoot" 2> /dev/null`";
+                echo "Root-folder: `echo $IRootFolder| grep -vE "DocumentRoot" 2> /dev/null`";
                 $SETCOLOR_NORMAL
-                #
                 $SETCOLOR_TITLE
                 echo "Root-XML: `echo $LocalXML`";
                 $SETCOLOR_NORMAL
-                Cache_Dir="$Roots/var/cache/*"
-                #Run Flush_Redis_Cache function
-                Flush_Redis_Cache;
-                #Run Flush_Memcached function
-                Flush_Memcached;
-          fi 
-        fi   
-  done;
-done;
+                Cache_Dir="$IRootFolder/var/cache/*"
+        fi
+        #
+        #Run Flush_Redis_Cache function
+        Flush_Redis_Cache;
+        #Run Flush_Memcached function
+        Flush_Memcached;
+        #
+done; 
 #
 # Send report to email list
 if [ -z "`rpm -qa | grep mailx`" ]; then
-	yum install mailx -y
-	$SETCOLOR_TITLE
-	echo "service of mail has been installed on `hostname`";
-	$SETCOLOR_NORMAL
+  yum install mailx -y
+  $SETCOLOR_TITLE
+  echo "service of mail has been installed on `hostname`";
+  $SETCOLOR_NORMAL
 else
-	mail -s " HOSTNAME is `hostname`" $List_of_emails < $FlushCacheReport
-fi	
+  mail -s " HOSTNAME is `hostname`" $List_of_emails < $FlushCacheReport
+fi  
 rm -f $FlushCacheReport
+rm -f $RootFolder
 #
 echo "LOG_FILE= $FlushCacheReport has been sent";
 #
