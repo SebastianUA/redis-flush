@@ -86,90 +86,107 @@ else
 fi
 
 function Flush_Redis_Cache () {
-    $SETCOLOR_TITLE_GREEN
-    echo "**********************************************";
-    echo "********************REDIS*********************";
-    echo "**********************************************";
-    $SETCOLOR_NORMAL  
-    #
-    # check redis IP
-     CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13 | grep "<server>"| uniq|cut -d ">" -f2 | cut -d "<" -f1|uniq)
-      if [ -z "$CacheRedisIP" ]; then
-               CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"|uniq|cut -d "[" -f3| cut -d "]" -f1|uniq) 
-      fi                      
-      echo "Cache Redis server/IP: `echo $CacheRedisIP 2> /dev/null`";
-      #
-      #PORTS
-       CacheRedisPorts=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13  | cut -d '>' -f2| grep port | cut -d '<' -f1|uniq)
-       if [ -z "$CacheRedisPorts" ]; then
-            CacheRedisPorts=$(cat `echo $LocalXML 2> /dev/null` |grep Cache_Backend_Redis -A13 | grep port | cut -d "[" -f3| cut -d "]" -f1|uniq| grep -Ev "gzip")
-       fi   
-       echo "Cache-redis-ports: `echo $CacheRedisPorts 2> /dev/null`";
-      # PS 6381 - don't flush
-        IgnoreCacheRedisPorts="6381"
-      #
-      # redis-cli -h 127.0.0.1 -p 6378 flushall   (sessions)
-      # redis-cli -h 127.0.0.1 -p 6379 flushall   (cache)
-      # redis-cli -h 127.0.0.1 -p 6380 flushall    (full_page_cache)
-      #Check_DB
-       CacheRedisDB=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13 | grep database | cut -d ">" -f2 |cut -d "<" -f1|uniq)
-       echo "CacheRedisDB = `echo $CacheRedisDB 2> /dev/null`"
-      #
-      # -n : string is not null.
-      # -z : string is null, that is, has zero length
-if [ ! -z "$CacheRedisIP" ]; then
-    for ICacheRedisIP in `echo $CacheRedisIP|xargs -I{} -n1 echo {}` ; do
+  $SETCOLOR_TITLE_GREEN
+  echo "**********************************************";
+  echo "********************REDIS*********************";
+  echo "**********************************************";
+  $SETCOLOR_NORMAL  
+  #
+  # check redis IP
+  CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13 | grep "<server>"| uniq|cut -d ">" -f2 | cut -d "<" -f1|uniq)
+  if [ -z "$CacheRedisIP" ]; then
+             CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"|uniq|cut -d "[" -f3| cut -d "]" -f1|uniq) 
+  fi                      
+  #
+  #PORTS
+  CacheRedisPorts=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13  | cut -d '>' -f2| grep port | cut -d '<' -f1|uniq)
+  if [ -z "$CacheRedisPorts" ]; then
+           CacheRedisPorts=$(cat `echo $LocalXML 2> /dev/null` |grep Cache_Backend_Redis -A13 | grep port | cut -d "[" -f3| cut -d "]" -f1|uniq| grep -Ev "gzip")
+  fi   
+  # PS 6381 - don't flush
+  IgnoreCacheRedisPorts="6381"
+  #
+  # redis-cli -h 127.0.0.1 -p 6378 flushall   (sessions)
+  # redis-cli -h 127.0.0.1 -p 6379 flushall   (cache)
+  # redis-cli -h 127.0.0.1 -p 6380 flushall    (full_page_cache)
+  #Check_DB
+  CacheRedisDB=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13 | grep database | cut -d ">" -f2 |cut -d "<" -f1|uniq)
+  #
+  # -n : string is not null.
+  # -z : string is null, that is, has zero length
+  if [ ! -z "$CacheRedisIP" ]; then
+       for ICacheRedisIP in `echo $CacheRedisIP|xargs -I{} -n1 echo {}` ; do
             echo "Cache Redis server: `echo $ICacheRedisIP`";
+            #echo "Cache Redis server/IP: `echo $CacheRedisIP 2> /dev/null`";
             for ICacheRedisPorts in `echo $CacheRedisPorts|xargs -I{} -n1 echo {}` ; do
+                echo "Cache-redis-ports: `echo $CacheRedisPorts 2> /dev/null`";  
                 if [ "$ICacheRedisPorts" -ne "$IgnoreCacheRedisPorts" ]; then
-                         #
-                         if [ -z "$CacheRedisDB" ]; then
-                                #
-                                if [ -n "`whereis redis-cli| awk '{print $2}'`" ]; then
-                                    #    
-                                    R_flush=$(redis-cli -h `echo $ICacheRedisIP` -p `echo $ICacheRedisPorts` flushall)
-                                    $SETCOLOR_TITLE
-                                    echo "redis-cli -h `echo $ICacheRedisIP` -p `echo $ICacheRedisPorts` flushall";
-                                    $SETCOLOR_NORMAL
-                                 else
-                                      echo "PLEASE USE TELNET!";
-                                      #
-                                      Flush_CacheRediss="flushall";
-                                      Close_Expect_with_CacheRediss="quit";
-                                      $SETCOLOR_TITLE
-                                      echo $ICacheRedisIP '+' $ICacheRedisPorts
-                                      $SETCOLOR_NORMAL
-                                      expect <<EOF 
-                                            spawn telnet $ICacheRedisIP $ICacheRedisPorts
-                                            expect "Escape character is '^]'."
-                                            send "$Flush_CacheRediss\n"
-                                            expect "+OK"
-                                            sleep 3
-                                            send "$Close_Expect_with_CacheRediss\n"
+                      echo "CacheRedisDB = `echo $CacheRedisDB 2> /dev/null`"
+                      if [ -z "$CacheRedisDB" ]; then
+                            if [ -n "`whereis redis-cli| awk '{print $2}'`" ]; then 
+                                  R_flush=$(redis-cli -h `echo $ICacheRedisIP` -p `echo $ICacheRedisPorts` flushall)
+                                  $SETCOLOR_TITLE
+                                  echo "redis-cli -h `echo $ICacheRedisIP` -p `echo $ICacheRedisPorts` flushall";
+                                  $SETCOLOR_NORMAL
+                            else
+                                  Flush_CacheRediss="flushall";
+                                  Close_Expect_with_CacheRediss="quit";
+                                  $SETCOLOR_TITLE
+                                  echo $ICacheRedisIP '+' $ICacheRedisPorts
+                                  $SETCOLOR_NORMAL
+                                  expect <<EOF 
+                                        spawn telnet $ICacheRedisIP $ICacheRedisPorts
+                                        expect "Escape character is '^]'."
+                                        send "$Flush_CacheRediss\n"
+                                        expect "+OK"
+                                        sleep 3
+                                        send "$Close_Expect_with_CacheRediss\n"
 EOF
-                                 fi           
-                          else
-                                #flush_db
+                            fi           
+                      else
+                            #flush_db
+                            $SETCOLOR_TITLE
+                            Server_port="SERVER::::> `echo $ICacheRedisIP` PORT::::> `echo $ICacheRedisPorts`";
+                            $SETCOLOR_NORMAL
+                            echo "`echo $Server_port`";
+                            for ICacheRedisDB in `echo $CacheRedisDB|xargs -I{} -n1 echo {}` ; do
+                                echo "Need to flush DB `echo $ICacheRedisDB`";
                                 $SETCOLOR_TITLE
-                                Server_port="SERVER::::> `echo $ICacheRedisIP` PORT::::> `echo $ICacheRedisPorts`";
+                                echo "`echo $Server_port` DataBase::::> `echo $ICacheRedisDB`";
                                 $SETCOLOR_NORMAL
-                                echo "`echo $Server_port`";
-                                for ICacheRedisDB in `echo $CacheRedisDB|xargs -I{} -n1 echo {}` ; do
-                                    echo "Need to flush DB `echo $ICacheRedisDB`";
-                                    $SETCOLOR_TITLE
-                                    echo "`echo $Server_port` DataBase::::> `echo $ICacheRedisDB`";
-                                    $SETCOLOR_NORMAL
-                                    # 
-                                    CacheRedisDBAuth=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13 | grep password | cut -d ">" -f2 |cut -d "<" -f1|uniq)
-                                    if [ -z "$CacheRedisDBAuth" ]; then
+                                # 
+                                CacheRedisDBAuth=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13 | grep password | cut -d ">" -f2 |cut -d "<" -f1|uniq)
+                                if [ -z "$CacheRedisDBAuth" ]; then
+                                      Flush_CacheRedisDB="flushdb";
+                                      Close_Expect_with_CacheRedis="quit";
+                                      Close_connection="Connection will be CLOSED now!";
+                                      #
+                                      #`which expect| grep -E expect`<< EOF
+                                      expect <<EOF 
+                                          spawn telnet $ICacheRedisIP $ICacheRedisPorts
+                                          expect "Escape character is '^]'."
+                                          send "SELECT $ICacheRedisDB\n"
+                                          expect "+OK"
+                                          send "$Flush_CacheRedisDB\n"
+                                          expect "+OK"
+                                          sleep 3
+                                          send "$Close_connection\n"
+                                          send "$Close_Expect_with_CacheRedis\n"                                             
+EOF
+                                else
+                                      $SETCOLOR_TITLE
+                                      echo "AUTH Authentication required.";
+                                      $SETCOLOR_NORMAL
+                                      for ICacheRedisDBAuth in `echo $CacheRedisDBAuth|xargs -I{} -n1 echo {}` ; do
                                             Flush_CacheRedisDB="flushdb";
                                             Close_Expect_with_CacheRedis="quit";
                                             Close_connection="Connection will be CLOSED now!";
                                             #
-                                            #`which expect| grep -E expect`<< EOF
                                             expect <<EOF 
                                                 spawn telnet $ICacheRedisIP $ICacheRedisPorts
                                                 expect "Escape character is '^]'."
+                                                send "AUTH $ICacheRedisDBAuth\n"
+                                                expect "+OK"
                                                 send "SELECT $ICacheRedisDB\n"
                                                 expect "+OK"
                                                 send "$Flush_CacheRedisDB\n"
@@ -178,32 +195,10 @@ EOF
                                                 send "$Close_connection\n"
                                                 send "$Close_Expect_with_CacheRedis\n"                                             
 EOF
-                                    else
-                                        $SETCOLOR_TITLE
-                                        echo "AUTH Authentication required.";
-                                        $SETCOLOR_NORMAL
-                                        for ICacheRedisDBAuth in `echo $CacheRedisDBAuth|xargs -I{} -n1 echo {}` ; do
-                                                Flush_CacheRedisDB="flushdb";
-                                                Close_Expect_with_CacheRedis="quit";
-                                                Close_connection="Connection will be CLOSED now!";
-                                                #
-                                                expect <<EOF 
-                                                    spawn telnet $ICacheRedisIP $ICacheRedisPorts
-                                                    expect "Escape character is '^]'."
-                                                    send "AUTH $ICacheRedisDBAuth\n"
-                                                    expect "+OK"
-                                                    send "SELECT $ICacheRedisDB\n"
-                                                    expect "+OK"
-                                                    send "$Flush_CacheRedisDB\n"
-                                                    expect "+OK"
-                                                    sleep 3
-                                                    send "$Close_connection\n"
-                                                    send "$Close_Expect_with_CacheRedis\n"                                             
-EOF
                                         done;
-                                    fi    
-                                done;     
-                          fi         
+                                fi    
+                              done;     
+                        fi         
                 else
                      echo "Oops IgnoreCacheRedisPorts is '$IgnoreCacheRedisPorts' EXIT!";
                      break;
@@ -235,30 +230,28 @@ function Flush_Memcached () {
         MemcachedPort=$(cat `echo $LocalXML` 2> /dev/null | grep '<memcached>' -A7| grep -E 'host|CDATA|port' | grep -v "ersistent"| grep port| cut -d "[" -f3| cut -d "]" -f1|uniq)
         
         Close_Expect_with_Memcached="quit"
-        Flush_Memcached="flush_all"
-  
-if [ ! -z "$MemcachedServer" ]; then
-        $SETCOLOR_TITLE
-        echo "Memcached Server => `echo $MemcachedServer`";
-        echo "Memcached Port => `echo $MemcachedPort`";
-        $SETCOLOR_NORMAL  
-         `which expect | grep -E expect` <<EOF
-                spawn telnet $MemcachedServer $MemcachedPort
-                expect "Escape character is '^]'."
-                send "$Flush_Memcached\n"
-                expect "+OK"
-                sleep 1
-                send "$Close_Expect_with_Memcached\n"
+        Flush_Memcached="flush_all"  
+        if [ ! -z "$MemcachedServer" ]; then
+              $SETCOLOR_TITLE
+              echo "Memcached Server => `echo $MemcachedServer`";
+              echo "Memcached Port => `echo $MemcachedPort`";
+              $SETCOLOR_NORMAL  
+              `which expect | grep -E expect` <<EOF
+                    spawn telnet $MemcachedServer $MemcachedPort
+                    expect "Escape character is '^]'."
+                    send "$Flush_Memcached\n"
+                    expect "+OK"
+                    sleep 1
+                    send "$Close_Expect_with_Memcached\n"
 EOF
-        $SETCOLOR_TITLE
-        echo "memcached has been flushed on server `hostname`";
-        $SETCOLOR_NORMAL
-else
-        $SETCOLOR_TITLE
-        echo "Din't find memcached on server `hostname`";
-        $SETCOLOR_NORMAL
-        break;
-fi
+              $SETCOLOR_TITLE
+              echo "memcached has been flushed on server `hostname`";
+              $SETCOLOR_NORMAL
+        else
+              $SETCOLOR_TITLE
+              echo "Din't find memcached on server `hostname`";
+              $SETCOLOR_NORMAL
+        fi
 }
 #
 for Iconfig in `ls -al /etc/nginx/conf.d/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
@@ -273,56 +266,53 @@ for Iconfig in `ls -al /etc/nginx/conf.d/*.conf | grep "^-"| grep -vE "(default|
     #
     for Roots in `echo $RootF|xargs -I{} -n1 echo {}` ; do
         if [ ! -z "$Roots" ]; then
-          #
-          echo "$Roots" >> $RootFolder
-          sed -e 's/\s\+/\n/g' $RootFolder > $RootFolder-2
-          awk '!x[$0]++' $RootFolder-2 > $RootFolder
+             echo "$Roots" >> $RootFolder
+             sed -e 's/\s\+/\n/g' $RootFolder > $RootFolder-2
+             awk '!x[$0]++' $RootFolder-2 > $RootFolder
         fi
     done
 done
 #
-for IRootFolder in `cat $RootFolder|uniq` ; do
+for IRootFolder in `cat $RootFolder|xargs -I{} -n1 echo {}` ; do
         echo "-----------------------------------------------------------";
         echo "--------------------------SITE-----------------------------";
         echo "-----------------------------------------------------------";
         if [[ "$IRootFolder" == */ ]]; then 
-                 $SETCOLOR_TITLE
-                 echo "Root-folder: `echo $IRootFolder| grep -vE "DocumentRoot" 2> /dev/null`";
-                 $SETCOLOR_NORMAL
-                 XML="app/etc/local.xml";
-                 LocalXML="$IRootFolder$XML"
-                 $SETCOLOR_TITLE
-                 echo "Root-XML with '/' : `echo $LocalXML| grep -vE "DocumentRoot"`";
-                 $SETCOLOR_NORMAL
-                 #  
-                 Var_Cache="var/cache/*";
-                 Cache_Dir="$IRootFolder$Var_Cache"
+               $SETCOLOR_TITLE
+               #echo "Root-folder: `echo $IRootFolder| grep -vE "DocumentRoot" 2> /dev/null`";
+               echo "Root-folder: $IRootFolder";
+               $SETCOLOR_NORMAL
+               XML="app/etc/local.xml";
+               LocalXML="$IRootFolder$XML"
+               $SETCOLOR_TITLE
+               echo "Root-XML with '/' : `echo $LocalXML| grep -vE "DocumentRoot"`";
+               $SETCOLOR_NORMAL
+               Var_Cache="var/cache/*";
+               Cache_Dir="$IRootFolder$Var_Cache"
         else
                 LocalXML="$IRootFolder/app/etc/local.xml"
                 $SETCOLOR_TITLE
-                echo "Root-folder: `echo $IRootFolder| grep -vE "DocumentRoot" 2> /dev/null`";
+                #echo "Root-folder: `echo $IRootFolder| grep -vE "DocumentRoot" 2> /dev/null`";
+                echo "Root-folder: $IRootFolder";
                 $SETCOLOR_NORMAL
                 $SETCOLOR_TITLE
                 echo "Root-XML: `echo $LocalXML`";
                 $SETCOLOR_NORMAL
                 Cache_Dir="$IRootFolder/var/cache/*"
         fi
-        #
         #Run Flush_Redis_Cache function
         Flush_Redis_Cache;
         #Run Flush_Memcached function
         Flush_Memcached;
-        #
 done; 
-#
 # Send report to email list
 if [ -z "`rpm -qa | grep mailx`" ]; then
-  yum install mailx -y
-  $SETCOLOR_TITLE
-  echo "service of mail has been installed on `hostname`";
-  $SETCOLOR_NORMAL
+      yum install mailx -y
+      $SETCOLOR_TITLE
+      echo "service of mail has been installed on `hostname`";
+      $SETCOLOR_NORMAL
 else
-  mail -s " HOSTNAME is `hostname`" $List_of_emails < $FlushCacheReport
+      mail -s " HOSTNAME is `hostname`" $List_of_emails < $FlushCacheReport
 fi  
 rm -f $FlushCacheReport
 rm -f $RootFolder
