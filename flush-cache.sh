@@ -85,6 +85,28 @@ else
         $SETCOLOR_NORMAL
 fi
 
+function Check_Web_Servers () {
+    if  type -path "nginx" > /dev/null 2>&1; then  
+        for Iconfig in `ls -al /etc/nginx/conf.d/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
+            RootF=$(cat $Iconfig 2> /dev/null| grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|log|-f)"|uniq| grep -vE "(blog|wp)")    
+        done
+    elif type -path "httpd" > /dev/null 2>&1; then      
+        for Iconfig in `ls -al /etc/httpd/conf.d/vhosts/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
+            echo "No such file or directory (default for nginx)";
+            RootF=$(cat $Iconfig 2> /dev/null| grep DocumentRoot| cut -d '"' -f2|uniq| grep -v "blog") 
+        done
+    else
+         echo "Please check which web-server installed on `hostname`";         
+    fi
+    for Roots in `echo $RootF|xargs -I{} -n1 echo {}` ; do
+        if [ ! -z "$Roots" ]; then
+                echo "$Roots" >> $RootFolder
+                sed -e 's/\s\+/\n/g' $RootFolder > $RootFolder-2
+                awk '!x[$0]++' $RootFolder-2 > $RootFolder
+        fi
+    done  
+}
+
 function Flush_Redis_Cache () {
   $SETCOLOR_TITLE_GREEN
   echo "**********************************************";
@@ -93,18 +115,18 @@ function Flush_Redis_Cache () {
   $SETCOLOR_NORMAL  
   #
   # check redis IP
-  CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13 | grep "<server>"| uniq|cut -d ">" -f2 | cut -d "<" -f1|uniq)
+  CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"| uniq|cut -d ">" -f2 | cut -d "<" -f1|uniq)
   if [ -z "$CacheRedisIP" ]; then
-             CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"|uniq|cut -d "[" -f3| cut -d "]" -f1|uniq) 
+             CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"|uniq| cut -d "[" -f3| cut -d "]" -f1|uniq) 
   fi                      
   #
   #PORTS
-  CacheRedisPorts=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13  | cut -d '>' -f2| grep port | cut -d '<' -f1|uniq)
+  CacheRedisPorts=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| cut -d '>' -f2| grep port | cut -d '<' -f1|uniq)
   if [ -z "$CacheRedisPorts" ]; then
            CacheRedisPorts=$(cat `echo $LocalXML 2> /dev/null` |grep Cache_Backend_Redis -A13 | grep port | cut -d "[" -f3| cut -d "]" -f1|uniq| grep -Ev "gzip")
   fi   
   # PS 6381 - don't flush
-  IgnoreCacheRedisPorts="6381"
+  IgnoreCacheRedisPorts="666"
   #
   # redis-cli -h 127.0.0.1 -p 6378 flushall   (sessions)
   # redis-cli -h 127.0.0.1 -p 6379 flushall   (cache)
@@ -117,7 +139,6 @@ function Flush_Redis_Cache () {
   if [ ! -z "$CacheRedisIP" ]; then
        for ICacheRedisIP in `echo $CacheRedisIP|xargs -I{} -n1 echo {}` ; do
             echo "Cache Redis server: `echo $ICacheRedisIP`";
-            #echo "Cache Redis server/IP: `echo $CacheRedisIP 2> /dev/null`";
             for ICacheRedisPorts in `echo $CacheRedisPorts|xargs -I{} -n1 echo {}` ; do
                 echo "Cache-redis-ports: `echo $CacheRedisPorts 2> /dev/null`";  
                 if [ "$ICacheRedisPorts" -ne "$IgnoreCacheRedisPorts" ]; then
@@ -154,13 +175,11 @@ EOF
                                 $SETCOLOR_TITLE
                                 echo "`echo $Server_port` DataBase::::> `echo $ICacheRedisDB`";
                                 $SETCOLOR_NORMAL
-                                # 
                                 CacheRedisDBAuth=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13 | grep password | cut -d ">" -f2 |cut -d "<" -f1|uniq)
                                 if [ -z "$CacheRedisDBAuth" ]; then
                                       Flush_CacheRedisDB="flushdb";
                                       Close_Expect_with_CacheRedis="quit";
                                       Close_connection="Connection will be CLOSED now!";
-                                      #
                                       #`which expect| grep -E expect`<< EOF
                                       expect <<EOF 
                                           spawn telnet $ICacheRedisIP $ICacheRedisPorts
@@ -181,7 +200,6 @@ EOF
                                             Flush_CacheRedisDB="flushdb";
                                             Close_Expect_with_CacheRedis="quit";
                                             Close_connection="Connection will be CLOSED now!";
-                                            #
                                             expect <<EOF 
                                                 spawn telnet $ICacheRedisIP $ICacheRedisPorts
                                                 expect "Escape character is '^]'."
@@ -254,24 +272,9 @@ EOF
         fi
 }
 #
-for Iconfig in `ls -al /etc/nginx/conf.d/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
-    RootF=$(cat $Iconfig 2> /dev/null| grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|log|-f)"|uniq| grep -vE "(blog|wp)")    
-    #if [ -n "$RootF" ]; then
-    #    $SETCOLOR_TITLE
-    #    echo "No such file or directory (default for nginx)";
-    #    RootF=$(cat /etc/httpd/conf.d/vhosts/*.conf 2> /dev/null | grep DocumentRoot| cut -d '"' -f2|uniq| grep -v "blog")
-    #    $SETCOLOR_NORMAL
-    #    #cat: /etc/nginx/conf.d/*.conf: No such file or directory 
-    #fi
-    #
-    for Roots in `echo $RootF|xargs -I{} -n1 echo {}` ; do
-        if [ ! -z "$Roots" ]; then
-             echo "$Roots" >> $RootFolder
-             sed -e 's/\s\+/\n/g' $RootFolder > $RootFolder-2
-             awk '!x[$0]++' $RootFolder-2 > $RootFolder
-        fi
-    done
-done
+# Start Check_Web_Servers function
+Check_Web_Servers
+#
 #
 for IRootFolder in `cat $RootFolder|xargs -I{} -n1 echo {}` ; do
         echo "-----------------------------------------------------------";
@@ -279,7 +282,6 @@ for IRootFolder in `cat $RootFolder|xargs -I{} -n1 echo {}` ; do
         echo "-----------------------------------------------------------";
         if [[ "$IRootFolder" == */ ]]; then 
                $SETCOLOR_TITLE
-               #echo "Root-folder: `echo $IRootFolder| grep -vE "DocumentRoot" 2> /dev/null`";
                echo "Root-folder: $IRootFolder";
                $SETCOLOR_NORMAL
                XML="app/etc/local.xml";
@@ -292,7 +294,6 @@ for IRootFolder in `cat $RootFolder|xargs -I{} -n1 echo {}` ; do
         else
                 LocalXML="$IRootFolder/app/etc/local.xml"
                 $SETCOLOR_TITLE
-                #echo "Root-folder: `echo $IRootFolder| grep -vE "DocumentRoot" 2> /dev/null`";
                 echo "Root-folder: $IRootFolder";
                 $SETCOLOR_NORMAL
                 $SETCOLOR_TITLE
