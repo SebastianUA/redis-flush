@@ -16,7 +16,67 @@ SETCOLOR_TITLE="echo -en \\033[1;36m" #Fuscia
 SETCOLOR_TITLE_GREEN="echo -en \\033[0;32m" #green
 SETCOLOR_NUMBERS="echo -en \\033[0;34m" #BLUE
 
-function Operation_status {
+# whoami
+if [ "`whoami`" = "root" ]; then
+     # LOGs
+     FlushCacheReport="/var/log/FlushCacheReport.log"
+     if [ ! -f "$FlushCacheReport" ]; then
+          $SETCOLOR_TITLE
+          echo "The flushall-caches.log file NOT FOUND in the folder /var/log";
+          $SETCOLOR_NORMAL
+          touch $FlushCacheReport
+          $SETCOLOR_TITLE
+          echo "The $FlushCacheReport file was CREATED";
+          $SETCOLOR_NORMAL
+     else
+          $SETCOLOR_TITLE
+          echo "The '$FlushCacheReport' file allready exists"
+          rm -f $FlushCacheReport
+          touch $FlushCacheReport
+          $SETCOLOR_NORMAL
+     fi
+     RootFolder="/var/log/RootFolder.log"
+     if [ ! -f "$RootFolder" ]; then
+          $SETCOLOR_TITLE
+          echo "The RootFolder.log file NOT FOUND in the folder /var/log";
+          $SETCOLOR_NORMAL
+          touch $RootFolder
+          $SETCOLOR_TITLE
+          echo "The $RootFolder file was CREATED";
+          $SETCOLOR_NORMAL
+      else
+          $SETCOLOR_TITLE
+          echo "The '$RootFolder' file allready exists"
+          rm -f $RootFolder
+          touch $RootFolder
+          $SETCOLOR_NORMAL
+      fi  
+      # Receiver email for reports
+      List_of_emails="vnatarov@gorillagroup.com"
+      exec > >(tee -a ${FlushCacheReport} )
+      exec 2> >(tee -a ${FlushCacheReport} >&2)
+      echo "**************************************************************" >> $FlushCacheReport
+      echo "HOSTNAME: `hostname`" >> $FlushCacheReport
+      echo "**************************************************************" >> $FlushCacheReport
+      if ! type -path "expect" > /dev/null 2>&1; then
+             yum install expect -y
+             $SETCOLOR_TITLE
+             echo "expect has been INSTALLED on this server: `hostname`";
+             $SETCOLOR_NORMAL
+      else
+             $SETCOLOR_TITLE
+             echo "expect INSTALLED on this server: `hostname`";
+             $SETCOLOR_NORMAL
+      fi
+else 
+     echo" `whoami` is doesn't have permissions. Please use ROOT user for it!";
+     exit; 
+fi
+###############################################################
+########################## FUNCTIONS ##########################
+###############################################################
+
+function Operation_status () {
      if [ $? -eq 0 ]; then
          $SETCOLOR_SUCCESS;
          echo -n "$(tput hpa $(tput cols))$(tput cub 6)[OK]"
@@ -30,81 +90,33 @@ function Operation_status {
      fi
 }
 
-# LOGs
-FlushCacheReport="/var/log/FlushCacheReport.log"
-if [ ! -f "$FlushCacheReport" ]; then
-    $SETCOLOR_TITLE
-    echo "The flushall-caches.log file NOT FOUND in the folder /var/log";
-    $SETCOLOR_NORMAL
-    touch $FlushCacheReport
-    $SETCOLOR_TITLE
-    echo "The $FlushCacheReport file was CREATED";
-    $SETCOLOR_NORMAL
-else
-    $SETCOLOR_TITLE
-    echo "The '$FlushCacheReport' file allready exists"
-    rm -f $FlushCacheReport
-    touch $FlushCacheReport
-    $SETCOLOR_NORMAL
-fi
-RootFolder="/var/log/RootFolder.log"
-if [ ! -f "$RootFolder" ]; then
-    $SETCOLOR_TITLE
-    echo "The RootFolder.log file NOT FOUND in the folder /var/log";
-    $SETCOLOR_NORMAL
-    touch $RootFolder
-    $SETCOLOR_TITLE
-    echo "The $RootFolder file was CREATED";
-    $SETCOLOR_NORMAL
-else
-    $SETCOLOR_TITLE
-    echo "The '$RootFolder' file allready exists"
-    rm -f $RootFolder
-    touch $RootFolder
-    $SETCOLOR_NORMAL
-fi
-
-# Receiver email for reports
- List_of_emails="vnatarov@gorillagroup.com"
-
-exec > >(tee -a ${FlushCacheReport} )
-exec 2> >(tee -a ${FlushCacheReport} >&2)
-
-echo "**************************************************************" >> $FlushCacheReport
-echo "HOSTNAME: `hostname`" >> $FlushCacheReport
-echo "**************************************************************" >> $FlushCacheReport
-
-if ! type -path "expect" > /dev/null 2>&1; then
-             yum install expect -y
-             $SETCOLOR_TITLE
-             echo "expect has been INSTALLED on this server: `hostname`";
-             $SETCOLOR_NORMAL
-else
-        $SETCOLOR_TITLE
-        echo "expect INSTALLED on this server: `hostname`";
-        $SETCOLOR_NORMAL
-fi
+function Add_Root_Folder_to_File () {
+    for Roots in `echo $RootF|xargs -I{} -n1 echo {}` ; do
+        if [ ! -z "$Roots" ]; then
+              echo "$Roots" >> $RootFolder
+              sed -e 's/\s\+/\n/g' $RootFolder > $RootFolder-2
+              awk '!x[$0]++' $RootFolder-2 > $RootFolder
+        fi
+    done   
+}
 
 function Check_Web_Servers () {
     if  type -path "nginx" > /dev/null 2>&1; then  
         for Iconfig in `ls -al /etc/nginx/conf.d/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
-            RootF=$(cat $Iconfig 2> /dev/null| grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|log|-f)"|uniq| grep -vE "(blog|wp)")    
+            RootF=$(cat $Iconfig 2> /dev/null| grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|log|-f)"|uniq| grep -vE "(blog|wp)") 
+            # run Add_Root_Folder_to_File function
+             Add_Root_Folder_to_File
         done
     elif type -path "httpd" > /dev/null 2>&1; then      
         for Iconfig in `ls -al /etc/httpd/conf.d/vhosts/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
             echo "No such file or directory (default for nginx)";
-            RootF=$(cat $Iconfig 2> /dev/null| grep DocumentRoot| cut -d '"' -f2|uniq| grep -v "blog") 
+            RootF=$(cat $Iconfig 2> /dev/null| grep DocumentRoot| cut -d '"' -f2|uniq| grep -v "blog")
+            # run Add_Root_Folder_to_File function
+             Add_Root_Folder_to_File 
         done
     else
          echo "Please check which web-server installed on `hostname`";         
     fi
-    for Roots in `echo $RootF|xargs -I{} -n1 echo {}` ; do
-        if [ ! -z "$Roots" ]; then
-                echo "$Roots" >> $RootFolder
-                sed -e 's/\s\+/\n/g' $RootFolder > $RootFolder-2
-                awk '!x[$0]++' $RootFolder-2 > $RootFolder
-        fi
-    done  
 }
 
 function Flush_Redis_Cache () {
@@ -123,9 +135,9 @@ function Flush_Redis_Cache () {
   #PORTS
   CacheRedisPorts=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| cut -d '>' -f2| grep port | cut -d '<' -f1|uniq)
   if [ -z "$CacheRedisPorts" ]; then
-           CacheRedisPorts=$(cat `echo $LocalXML 2> /dev/null` |grep Cache_Backend_Redis -A13 | grep port | cut -d "[" -f3| cut -d "]" -f1|uniq| grep -Ev "gzip")
+           CacheRedisPorts=$(cat `echo $LocalXML 2> /dev/null` |grep Cache_Backend_Redis -A13 | grep port | cut -d "[" -f3| cut -d "]" -f1|uniq| grep -Ev "gzip"|uniq)
   fi   
-  # PS 6381 - don't flush
+  # If need ignore some port(s)
   IgnoreCacheRedisPorts="666"
   #
   # redis-cli -h 127.0.0.1 -p 6378 flushall   (sessions)
