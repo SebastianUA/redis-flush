@@ -69,7 +69,7 @@ if [ "`whoami`" = "root" ]; then
              $SETCOLOR_NORMAL
       fi
 else 
-     echo" `whoami` is doesn't have permissions. Please use ROOT user for it!";
+     echo" `whoami 2> /dev/null` doesn't have permissions. Please use ROOT user for it!";
      exit; 
 fi
 ###############################################################
@@ -103,13 +103,15 @@ function Add_Root_Folder_to_File () {
 function Check_Web_Servers () {
     if  type -path "nginx" > /dev/null 2>&1; then  
         for Iconfig in `ls -al /etc/nginx/conf.d/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
-            RootF=$(cat $Iconfig 2> /dev/null| grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|log|-f)"|uniq| grep -vE "(blog|wp)") 
+            RootF=$(cat $Iconfig 2> /dev/null| grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|log|-f)"|uniq| grep -vE "(blog|wp)")
+            SITE=$(cat $Iconfig 2> /dev/null| grep "server_name"|awk '{print $2}'|cut -d ";" -f1) 
             # run Add_Root_Folder_to_File function
              Add_Root_Folder_to_File
         done
-    elif type -path "httpd" > /dev/null 2>&1; then      
-        for Iconfig in `ls -al /etc/httpd/conf.d/vhosts/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
-            echo "No such file or directory (default for nginx)";
+    elif type -path "httpd" > /dev/null 2>&1; then 
+        # /etc/httpd/conf.d/     
+        #for Iconfig in `ls -al /etc/httpd/conf.d/vhosts/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
+          for Iconfig in `ls -alR /etc/httpd/conf.d/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
             RootF=$(cat $Iconfig 2> /dev/null| grep DocumentRoot| cut -d '"' -f2|uniq| grep -v "blog")
             # run Add_Root_Folder_to_File function
              Add_Root_Folder_to_File 
@@ -127,15 +129,15 @@ function Flush_Redis_Cache () {
   $SETCOLOR_NORMAL  
   #
   # check redis IP
-  CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"| uniq|cut -d ">" -f2 | cut -d "<" -f1|uniq)
+  CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"|uniq|cut -d ">" -f2 | cut -d "<" -f1)
   if [ -z "$CacheRedisIP" ]; then
-             CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"|uniq| cut -d "[" -f3| cut -d "]" -f1|uniq) 
+             CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"| uniq|cut -d "[" -f3| cut -d "]" -f1) 
   fi                      
   #
   #PORTS
   CacheRedisPorts=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| cut -d '>' -f2| grep port | cut -d '<' -f1|uniq)
   if [ -z "$CacheRedisPorts" ]; then
-           CacheRedisPorts=$(cat `echo $LocalXML 2> /dev/null` |grep Cache_Backend_Redis -A13 | grep port | cut -d "[" -f3| cut -d "]" -f1|uniq| grep -Ev "gzip"|uniq)
+           CacheRedisPorts=$(cat `echo $LocalXML 2> /dev/null` |grep Cache_Backend_Redis -A13 | grep port | cut -d "[" -f3| cut -d "]" -f1| grep -Ev "gzip"|uniq)
   fi   
   # If need ignore some port(s)
   IgnoreCacheRedisPorts="666"
@@ -149,8 +151,8 @@ function Flush_Redis_Cache () {
   # -n : string is not null.
   # -z : string is null, that is, has zero length
   if [ ! -z "$CacheRedisIP" ]; then
+       echo "CacheRedisIPs: `echo $CacheRedisIP 2> /dev/null`";
        for ICacheRedisIP in `echo $CacheRedisIP|xargs -I{} -n1 echo {}` ; do
-            echo "Cache Redis server: `echo $ICacheRedisIP`";
             for ICacheRedisPorts in `echo $CacheRedisPorts|xargs -I{} -n1 echo {}` ; do
                 echo "Cache-redis-ports: `echo $CacheRedisPorts 2> /dev/null`";  
                 if [ "$ICacheRedisPorts" -ne "$IgnoreCacheRedisPorts" ]; then
@@ -250,7 +252,7 @@ fi
 } 
 
 function Flush_Memcached () {
-        #MEMCACHED
+       #MEMCACHED
         $SETCOLOR_TITLE_GREEN
         echo "**********************************************";
         echo "******************MEMCACHED*******************";
@@ -285,13 +287,13 @@ EOF
 }
 #
 # Start Check_Web_Servers function
-Check_Web_Servers
+ Check_Web_Servers
 #
 #
 for IRootFolder in `cat $RootFolder|xargs -I{} -n1 echo {}` ; do
-        echo "-----------------------------------------------------------";
-        echo "--------------------------SITE-----------------------------";
-        echo "-----------------------------------------------------------";
+        echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+        echo " ~~~ `echo $SITE` ~~~ ";
+        echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
         if [[ "$IRootFolder" == */ ]]; then 
                $SETCOLOR_TITLE
                echo "Root-folder: $IRootFolder";
