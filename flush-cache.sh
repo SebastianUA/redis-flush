@@ -14,6 +14,7 @@ SETCOLOR_NORMAL="echo -en \\033[0;39m"
 
 SETCOLOR_TITLE="echo -en \\033[1;36m" #Fuscia
 SETCOLOR_TITLE_GREEN="echo -en \\033[0;32m" #green
+SETCOLOR_TITLE_PURPLE="echo -en \\033[0;35m" #purple 
 SETCOLOR_NUMBERS="echo -en \\033[0;34m" #BLUE
 
 # whoami
@@ -156,7 +157,7 @@ function Flush_Redis_Cache () {
             for ICacheRedisPorts in `echo $CacheRedisPorts|xargs -I{} -n1 echo {}` ; do
                 echo "Cache-redis-ports: `echo $CacheRedisPorts 2> /dev/null`";  
                 if [ "$ICacheRedisPorts" -ne "$IgnoreCacheRedisPorts" ]; then
-                      echo "CacheRedisDB = `echo $CacheRedisDB 2> /dev/null`"
+                      #echo "CacheRedisDB = `echo $CacheRedisDB 2> /dev/null`"
                       if [ -z "$CacheRedisDB" ]; then
                             if [ -n "`whereis redis-cli| awk '{print $2}'`" ]; then 
                                   R_flush=$(redis-cli -h `echo $ICacheRedisIP` -p `echo $ICacheRedisPorts` flushall)
@@ -179,13 +180,14 @@ function Flush_Redis_Cache () {
 EOF
                             fi           
                       else
+                            echo "CacheRedisDB = `echo $CacheRedisDB 2> /dev/null`" 
                             #flush_db
                             $SETCOLOR_TITLE
                             Server_port="SERVER::::> `echo $ICacheRedisIP` PORT::::> `echo $ICacheRedisPorts`";
                             $SETCOLOR_NORMAL
                             echo "`echo $Server_port`";
                             for ICacheRedisDB in `echo $CacheRedisDB|xargs -I{} -n1 echo {}` ; do
-                                echo "Need to flush DB `echo $ICacheRedisDB`";
+                                #echo "Need to flush DB `echo $ICacheRedisDB`";
                                 $SETCOLOR_TITLE
                                 echo "`echo $Server_port` DataBase::::> `echo $ICacheRedisDB`";
                                 $SETCOLOR_NORMAL
@@ -235,7 +237,9 @@ EOF
                      echo "Oops IgnoreCacheRedisPorts is '$IgnoreCacheRedisPorts' EXIT!";
                      break;
                 fi
+                $SETCOLOR_TITLE_PURPLE
                 echo "Flushed redis cache on $ICacheRedisPorts port";
+                $SETCOLOR_NORMAL
             done;
      done;
     #
@@ -292,7 +296,7 @@ EOF
 #
 for IRootFolder in `cat $RootFolder|xargs -I{} -n1 echo {}` ; do
         echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-        echo " ~~~ `echo $SITE` ~~~ ";
+        echo " ~~~~~~ `echo $SITE` ~~~~~~ ";
         echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
         if [[ "$IRootFolder" == */ ]]; then 
                $SETCOLOR_TITLE
@@ -322,7 +326,7 @@ for IRootFolder in `cat $RootFolder|xargs -I{} -n1 echo {}` ; do
 done; 
 # Send report to email list
 if [ -z "`rpm -qa | grep mailx`" ]; then
-      yum install mailx -y
+      yum install mailx -y 
       $SETCOLOR_TITLE
       echo "service of mail has been installed on `hostname`";
       $SETCOLOR_NORMAL
