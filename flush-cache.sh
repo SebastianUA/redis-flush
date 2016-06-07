@@ -60,7 +60,7 @@ if [ "`whoami`" = "root" ]; then
       echo "HOSTNAME: `hostname`" >> $FlushCacheReport
       echo "**************************************************************" >> $FlushCacheReport
       if ! type -path "expect" > /dev/null 2>&1; then
-             yum install expect -y
+             yum install expect -y &> /dev/null
              $SETCOLOR_TITLE
              echo "expect has been INSTALLED on this server: `hostname`";
              $SETCOLOR_NORMAL
@@ -326,7 +326,7 @@ for IRootFolder in `cat $RootFolder|xargs -I{} -n1 echo {}` ; do
 done; 
 # Send report to email list
 if [ -z "`rpm -qa | grep mailx`" ]; then
-      yum install mailx -y 
+      yum install mailx -y &> /dev/null
       $SETCOLOR_TITLE
       echo "service of mail has been installed on `hostname`";
       $SETCOLOR_NORMAL
