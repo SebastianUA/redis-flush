@@ -263,7 +263,7 @@ function Flush_Memcached () {
         echo "**********************************************";
         $SETCOLOR_NORMAL
         MemcachedServer=$(cat `echo $LocalXML` 2> /dev/null | grep '<memcached>' -A7| grep -E 'host|CDATA|port' | grep -v "ersistent"| grep host| cut -d "[" -f3| cut -d "]" -f1|uniq)
-        MemcachedPort=$(cat `echo $LocalXML` 2> /dev/null | grep '<memcached>' -A7| grep -E 'host|CDATA|port' | grep -v "ersistent"| grep port| cut -d "[" -f3| cut -d "]" -f1|uniq)
+        MemcachedPort=$(cat `echo $LocalXML` 2> /dev/null | grep '<memcached>' -A9| grep -E 'host|CDATA|port' | grep -v "ersistent"| grep port| cut -d "[" -f3| cut -d "]" -f1|uniq)
         
         Close_Expect_with_Memcached="quit"
         Flush_Memcached="flush_all"  
