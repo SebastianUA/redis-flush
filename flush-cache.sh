@@ -132,9 +132,9 @@ function Flush_Redis_Cache () {
   $SETCOLOR_NORMAL  
   #
   # check redis IP
-  CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"|uniq|cut -d ">" -f2 | cut -d "<" -f1)
+  CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"|uniq|cut -d ">" -f2 | cut -d "<" -f1|uniq)
   if [ -z "$CacheRedisIP" ]; then
-             CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"| uniq|cut -d "[" -f3| cut -d "]" -f1) 
+             CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"| uniq|cut -d "[" -f3| cut -d "]" -f1|uniq) 
   fi                      
   #
   #PORTS
