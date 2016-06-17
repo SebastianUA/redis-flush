@@ -71,7 +71,7 @@ if [ "`whoami`" = "root" ]; then
       fi
 else 
      echo" `whoami 2> /dev/null` doesn't have permissions. Please use ROOT user for it!";
-     exit 1 
+     exit; 
 fi
 ###############################################################
 ########################## FUNCTIONS ##########################
@@ -106,7 +106,6 @@ function Check_Web_Servers () {
         for Iconfig in `ls -al /etc/nginx/conf.d/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
             RootF=$(cat $Iconfig 2> /dev/null| grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|log|-f)"|uniq| grep -vE "(blog|wp)")
             SITE=$(cat $Iconfig 2> /dev/null| grep "server_name"|awk '{print $2}'|cut -d ";" -f1) 
-            echo $SITE
             # run Add_Root_Folder_to_File function
              Add_Root_Folder_to_File
         done
@@ -115,7 +114,6 @@ function Check_Web_Servers () {
         #for Iconfig in `ls -al /etc/httpd/conf.d/vhosts/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
           for Iconfig in `ls -alR /etc/httpd/conf.d/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
             RootF=$(cat $Iconfig 2> /dev/null| grep DocumentRoot| cut -d '"' -f2|uniq| grep -v "blog")
-            SITE=$(cat $Iconfig 2> /dev/null| grep -E "ServerName"|awk '{print $2}')
             # run Add_Root_Folder_to_File function
              Add_Root_Folder_to_File 
         done
@@ -132,9 +130,9 @@ function Flush_Redis_Cache () {
   $SETCOLOR_NORMAL  
   #
   # check redis IP
-  CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"|uniq|cut -d ">" -f2 | cut -d "<" -f1|uniq)
+  CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"|uniq|cut -d ">" -f2 | cut -d "<" -f1)
   if [ -z "$CacheRedisIP" ]; then
-             CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"| uniq|cut -d "[" -f3| cut -d "]" -f1|uniq) 
+             CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"| uniq|cut -d "[" -f3| cut -d "]" -f1) 
   fi                      
   #
   #PORTS
@@ -156,19 +154,12 @@ function Flush_Redis_Cache () {
   if [ ! -z "$CacheRedisIP" ]; then
        echo "CacheRedisIPs: `echo $CacheRedisIP 2> /dev/null`";
        for ICacheRedisIP in `echo $CacheRedisIP|xargs -I{} -n1 echo {}` ; do
-           #
-           if [ "`echo $ICacheRedisIP| grep -E "sock"`" ]; then
-                echo "Need FLUSH file with SOCKET (`echo $ICacheRedisIP`) on `hostname` server";
-                redis-cli -s `echo $ICacheRedisIP` flushall
-                echo "flushed socket file";
-                #
-           else          
-                for ICacheRedisPorts in `echo $CacheRedisPorts|xargs -I{} -n1 echo {}` ; do
-                    echo "Cache-redis-ports: `echo $CacheRedisPorts 2> /dev/null`";  
-                    if [ "$ICacheRedisPorts" -ne "$IgnoreCacheRedisPorts" ]; then
-                        #echo "CacheRedisDB = `echo $CacheRedisDB 2> /dev/null`"
-                        if [ -z "$CacheRedisDB" ]; then
-                              if [ -n "`whereis redis-cli| awk '{print $2}'`" ]; then 
+            for ICacheRedisPorts in `echo $CacheRedisPorts|xargs -I{} -n1 echo {}` ; do
+                echo "Cache-redis-ports: `echo $CacheRedisPorts 2> /dev/null`";  
+                if [ "$ICacheRedisPorts" -ne "$IgnoreCacheRedisPorts" ]; then
+                      #echo "CacheRedisDB = `echo $CacheRedisDB 2> /dev/null`"
+                      if [ -z "$CacheRedisDB" ]; then
+                            if [ -n "`whereis redis-cli| awk '{print $2}'`" ]; then 
                                   R_flush=$(redis-cli -h `echo $ICacheRedisIP` -p `echo $ICacheRedisPorts` flushall)
                                   $SETCOLOR_TITLE
                                   echo "redis-cli -h `echo $ICacheRedisIP` -p `echo $ICacheRedisPorts` flushall";
@@ -187,15 +178,15 @@ function Flush_Redis_Cache () {
                                         sleep 3
                                         send "$Close_Expect_with_CacheRediss\n"
 EOF
-                        fi           
-                        else
-                              echo "CacheRedisDB = `echo $CacheRedisDB 2> /dev/null`" 
-                              #flush_db
-                              $SETCOLOR_TITLE
-                              Server_port="SERVER::::> `echo $ICacheRedisIP` PORT::::> `echo $ICacheRedisPorts`";
-                              $SETCOLOR_NORMAL
-                              echo "`echo $Server_port`";
-                              for ICacheRedisDB in `echo $CacheRedisDB|xargs -I{} -n1 echo {}` ; do
+                            fi           
+                      else
+                            echo "CacheRedisDB = `echo $CacheRedisDB 2> /dev/null`" 
+                            #flush_db
+                            $SETCOLOR_TITLE
+                            Server_port="SERVER::::> `echo $ICacheRedisIP` PORT::::> `echo $ICacheRedisPorts`";
+                            $SETCOLOR_NORMAL
+                            echo "`echo $Server_port`";
+                            for ICacheRedisDB in `echo $CacheRedisDB|xargs -I{} -n1 echo {}` ; do
                                 #echo "Need to flush DB `echo $ICacheRedisDB`";
                                 $SETCOLOR_TITLE
                                 echo "`echo $Server_port` DataBase::::> `echo $ICacheRedisDB`";
@@ -239,9 +230,9 @@ EOF
                                                 send "$Close_Expect_with_CacheRedis\n"                                             
 EOF
                                         done;
-                        fi    
-                      done;     
-                fi         
+                                fi    
+                              done;     
+                        fi         
                 else
                      echo "Oops IgnoreCacheRedisPorts is '$IgnoreCacheRedisPorts' EXIT!";
                      break;
@@ -250,7 +241,6 @@ EOF
                 echo "Flushed redis cache on $ICacheRedisPorts port";
                 $SETCOLOR_NORMAL
             done;
-          fi  
      done;
     #
 else
@@ -303,23 +293,23 @@ EOF
 # Start Check_Web_Servers function
  Check_Web_Servers
 #
+#
 for IRootFolder in `cat $RootFolder|xargs -I{} -n1 echo {}` ; do
-      if [ -n "$SITE" ]; then     
-          echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-          echo " ~~~~~~ `echo $SITE` ~~~~~~ ";
-          echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-          if [[ "$IRootFolder" == */ ]]; then 
-                $SETCOLOR_TITLE
-                echo "Root-folder: $IRootFolder";
-                $SETCOLOR_NORMAL
-                XML="app/etc/local.xml";
-                LocalXML="$IRootFolder$XML"
-                $SETCOLOR_TITLE
-                echo "Root-XML with '/' : `echo $LocalXML| grep -vE "DocumentRoot"`";
-                $SETCOLOR_NORMAL
-                Var_Cache="var/cache/*";
-                Cache_Dir="$IRootFolder$Var_Cache"
-          else
+        echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+        echo " ~~~~~~ `echo $SITE` ~~~~~~ ";
+        echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+        if [[ "$IRootFolder" == */ ]]; then 
+               $SETCOLOR_TITLE
+               echo "Root-folder: $IRootFolder";
+               $SETCOLOR_NORMAL
+               XML="app/etc/local.xml";
+               LocalXML="$IRootFolder$XML"
+               $SETCOLOR_TITLE
+               echo "Root-XML with '/' : `echo $LocalXML| grep -vE "DocumentRoot"`";
+               $SETCOLOR_NORMAL
+               Var_Cache="var/cache/*";
+               Cache_Dir="$IRootFolder$Var_Cache"
+        else
                 LocalXML="$IRootFolder/app/etc/local.xml"
                 $SETCOLOR_TITLE
                 echo "Root-folder: $IRootFolder";
@@ -328,14 +318,11 @@ for IRootFolder in `cat $RootFolder|xargs -I{} -n1 echo {}` ; do
                 echo "Root-XML: `echo $LocalXML`";
                 $SETCOLOR_NORMAL
                 Cache_Dir="$IRootFolder/var/cache/*"
-          fi
-          #Run Flush_Redis_Cache function
-          Flush_Redis_Cache;
-          #Run Flush_Memcached function
-          Flush_Memcached;
-      #else
-      #     break;
-      fi         
+        fi
+        #Run Flush_Redis_Cache function
+        Flush_Redis_Cache;
+        #Run Flush_Memcached function
+        Flush_Memcached;
 done; 
 # Send report to email list
 # need to add other OS check (Ubuntu)
