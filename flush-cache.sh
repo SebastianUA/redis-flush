@@ -76,6 +76,63 @@ fi
 ###############################################################
 ########################## FUNCTIONS ##########################
 ###############################################################
+#
+function Install_Software () {
+      #
+      if [ -f /etc/centos-release ] || [ -f /etc/redhat-release ] || [ -f /etc/fedora_version ] ; then
+            if ! type -path "expect" > /dev/null 2>&1; then
+                  yum install expect -y &> /dev/null
+                  $SETCOLOR_TITLE
+                  echo "expect has been INSTALLED on this server: `hostname`";
+                  $SETCOLOR_NORMAL
+            else
+                  $SETCOLOR_TITLE
+                  echo "expect INSTALLED on this server: `hostname`";
+                  $SETCOLOR_NORMAL
+            fi
+
+            if [ -z "`rpm -qa | grep mailx`" ]; then
+                  yum install mailx -y &> /dev/null
+                  $SETCOLOR_TITLE
+                  echo "service of mail has been installed on `hostname`";
+                  $SETCOLOR_NORMAL
+            else
+                  $SETCOLOR_TITLE
+                  echo "mailx INSTALLED on this server: `hostname`";
+                  $SETCOLOR_NORMAL    
+            fi
+            elif [ -f /etc/debian_version ]; then
+                  echo "Debian/Ubuntu/Kali Linux";
+                  #
+                  if ! type -path "expect" > /dev/null 2>&1; then
+                        aptitude install expect-dev expect -y &> /dev/null
+                        $SETCOLOR_TITLE
+                        echo "expect has been INSTALLED on this server: `hostname`";
+                        $SETCOLOR_NORMAL
+                  else
+                        $SETCOLOR_TITLE
+                        echo "expect INSTALLED on this server: `hostname`";
+                        $SETCOLOR_NORMAL
+                  fi
+
+                  if [ -z "`which mailx`" ]; then
+                        apt-get install mailutils -y &> /dev/null
+                        $SETCOLOR_TITLE
+                        echo "service of mail has been installed on `hostname`";
+                        $SETCOLOR_NORMAL
+                  else
+                        $SETCOLOR_TITLE
+                        echo "mailx INSTALLED on this server: `hostname`";
+                        $SETCOLOR_NORMAL    
+            fi
+            else
+                  OS=$(uname -s)
+                  VER=$(uname -r)
+                  echo 'OS=' $OS 'VER=' $VER
+      fi
+} 
+# start this funcion
+Install_Software
 
 function Operation_status () {
      if [ $? -eq 0 ]; then
@@ -102,24 +159,51 @@ function Add_Root_Folder_to_File () {
 }
 
 function Check_Web_Servers () {
-    if  type -path "nginx" > /dev/null 2>&1; then  
-        for Iconfig in `ls -al /etc/nginx/conf.d/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
-            RootF=$(cat $Iconfig 2> /dev/null| grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|log|-f)"|uniq| grep -vE "(blog|wp)")
-            SITE=$(cat $Iconfig 2> /dev/null| grep "server_name"|awk '{print $2}'|cut -d ";" -f1) 
-            # run Add_Root_Folder_to_File function
-             Add_Root_Folder_to_File
-        done
+  if [ -f /etc/centos-release ] || [ -f /etc/redhat-release ] || [ -f /etc/fedora_version ] ; then
+    if  type -path "nginx" > /dev/null 2>&1; then
+         for Iconfig in `ls -al /etc/nginx/conf.d/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
+              RootF=$(cat $Iconfig 2> /dev/null| grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|log|-f)"|uniq| grep -vE "(blog|wp)")
+              SITE=$(cat $Iconfig 2> /dev/null| grep "server_name"|awk '{print $2}'|cut -d ";" -f1) 
+              echo $SITE
+              # run Add_Root_Folder_to_File function
+                Add_Root_Folder_to_File
+          done        
     elif type -path "httpd" > /dev/null 2>&1; then 
-        # /etc/httpd/conf.d/     
-        #for Iconfig in `ls -al /etc/httpd/conf.d/vhosts/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
-          for Iconfig in `ls -alR /etc/httpd/conf.d/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
-            RootF=$(cat $Iconfig 2> /dev/null| grep DocumentRoot| cut -d '"' -f2|uniq| grep -v "blog")
-            # run Add_Root_Folder_to_File function
-             Add_Root_Folder_to_File 
-        done
+          #for Iconfig in `ls -al /etc/httpd/conf.d/vhosts/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
+           for Iconfig in `ls -alR /etc/httpd/conf.d/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
+                RootF=$(cat $Iconfig 2> /dev/null| grep DocumentRoot| cut -d '"' -f2|uniq| grep -v "blog")
+                SITE=$(cat $Iconfig 2> /dev/null| grep -E "ServerName"|awk '{print $2}')
+                # run Add_Root_Folder_to_File function
+                  Add_Root_Folder_to_File 
+            done    
     else
          echo "Please check which web-server installed on `hostname`";         
     fi
+  #fi  
+  elif [[ -f /etc/debian_version ]]; then
+      #statements  
+      #echo "UBUNTU! Need to parse";
+      if  type -path "nginx" > /dev/null 2>&1; then
+         for Iconfig in `ls -al /etc/nginx/conf.d/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
+              RootF=$(cat $Iconfig 2> /dev/null| grep root|cut -d ";" -f1 | awk '{print $2}'|grep -vE "(SCRIPT_FILENAME|fastcgi_param|fastcgi_script_name|log|-f)"|uniq| grep -vE "(blog|wp)")
+              SITE=$(cat $Iconfig 2> /dev/null| grep "server_name"|awk '{print $2}'|cut -d ";" -f1) 
+              echo $SITE
+              # run Add_Root_Folder_to_File function
+                Add_Root_Folder_to_File
+          done        
+    elif type -path "apache2" > /dev/null 2>&1; then 
+          echo "apache2";
+          ##for Iconfig in `ls -al /etc/httpd/conf.d/vhosts/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
+          # for Iconfig in `ls -alR /etc/apache2/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
+          #      RootF=$(cat $Iconfig 2> /dev/null| grep DocumentRoot| cut -d '"' -f2|uniq| grep -v "blog")
+          #      SITE=$(cat $Iconfig 2> /dev/null| grep -E "ServerName"|awk '{print $2}')
+          #      # run Add_Root_Folder_to_File function
+          #        Add_Root_Folder_to_File 
+          #  done    
+    else
+         echo "Please check which web-server2 installed on `hostname`";         
+    fi
+  fi    
 }
 
 function Flush_Redis_Cache () {
@@ -325,19 +409,19 @@ for IRootFolder in `cat $RootFolder|xargs -I{} -n1 echo {}` ; do
         Flush_Memcached;
 done; 
 # Send report to email list
-# need to add other OS check (Ubuntu)
-if [ -z "`rpm -qa | grep mailx`" ]; then
-      yum install mailx -y &> /dev/null
+mail -s " HOSTNAME is `hostname`" $List_of_emails < $FlushCacheReport
+if [ $? -eq 0 ]; then
       $SETCOLOR_TITLE
-      echo "service of mail has been installed on `hostname`";
+      echo "LOG_FILE= $FlushCacheReport has been sent to `echo $List_of_emails`";
       $SETCOLOR_NORMAL
 else
-      mail -s " HOSTNAME is `hostname`" $List_of_emails < $FlushCacheReport
-fi  
+      $SETCOLOR_TITLE
+      echo "The email hasn't been sent to `echo $List_of_emails`";    
+      $SETCOLOR_NORMAL
+fi
+# 
 rm -f $FlushCacheReport
 rm -f $RootFolder
-#
-echo "LOG_FILE= $FlushCacheReport has been sent";
 #
 echo "|---------------------------------------------------|";
 echo "|--------------------FINISHED-----------------------|";
