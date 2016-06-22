@@ -52,6 +52,11 @@ if [ "`whoami`" = "root" ]; then
           touch $RootFolder
           $SETCOLOR_NORMAL
       fi  
+else 
+     echo" `whoami 2> /dev/null` doesn't have permissions. Please use ROOT user for it!";
+     exit; 
+fi
+
       # Receiver email for reports
       List_of_emails="vnatarov@gorillagroup.com"
       exec > >(tee -a ${FlushCacheReport} )
@@ -59,20 +64,7 @@ if [ "`whoami`" = "root" ]; then
       echo "**************************************************************" >> $FlushCacheReport
       echo "HOSTNAME: `hostname`" >> $FlushCacheReport
       echo "**************************************************************" >> $FlushCacheReport
-      if ! type -path "expect" > /dev/null 2>&1; then
-             yum install expect -y &> /dev/null
-             $SETCOLOR_TITLE
-             echo "expect has been INSTALLED on this server: `hostname`";
-             $SETCOLOR_NORMAL
-      else
-             $SETCOLOR_TITLE
-             echo "expect INSTALLED on this server: `hostname`";
-             $SETCOLOR_NORMAL
-      fi
-else 
-     echo" `whoami 2> /dev/null` doesn't have permissions. Please use ROOT user for it!";
-     exit; 
-fi
+
 ###############################################################
 ########################## FUNCTIONS ##########################
 ###############################################################
@@ -193,13 +185,13 @@ function Check_Web_Servers () {
           done        
     elif type -path "apache2" > /dev/null 2>&1; then 
           echo "apache2";
-          ##for Iconfig in `ls -al /etc/httpd/conf.d/vhosts/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
-          # for Iconfig in `ls -alR /etc/apache2/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
-          #      RootF=$(cat $Iconfig 2> /dev/null| grep DocumentRoot| cut -d '"' -f2|uniq| grep -v "blog")
-          #      SITE=$(cat $Iconfig 2> /dev/null| grep -E "ServerName"|awk '{print $2}')
-          #      # run Add_Root_Folder_to_File function
-          #        Add_Root_Folder_to_File 
-          #  done    
+          #for Iconfig in `ls -al /etc/httpd/conf.d/vhosts/*.conf | grep "^-"| grep -vE "(default|geo|example)"|awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
+           for Iconfig in `ls -alR /etc/apache2/sites-enabled/*.conf| awk '{print $9}'|xargs -I{} -n1 echo {}` ; do
+                RootF=$(cat $Iconfig 2> /dev/null| grep DocumentRoot| cut -d '"' -f2|uniq| grep -v "blog")
+                SITE=$(cat $Iconfig 2> /dev/null| grep -E "ServerName"|awk '{print $2}')
+                # run Add_Root_Folder_to_File function
+                  Add_Root_Folder_to_File 
+            done    
     else
          echo "Please check which web-server2 installed on `hostname`";         
     fi
@@ -332,10 +324,13 @@ else
      $SETCOLOR_TITLE
      echo "Local Cache on server `hostname`";
      $SETCOLOR_NORMAL
-     `rm -rf echo $Cache_Dir`
-     $SETCOLOR_TITLE
-     echo "Using LOCAL CACHE with command <rm -rf '$Cache_Dir' has been FLUSHED";
-     $SETCOLOR_NORMAL 
+     if [ ! -z "$Cache_Dir" ] ; then
+          #     
+          `rm -rf echo $Cache_Dir`
+          $SETCOLOR_TITLE
+          echo "Using LOCAL CACHE with command <rm -rf '$Cache_Dir' has been FLUSHED";
+          $SETCOLOR_NORMAL 
+      fi    
 fi     
 } 
 
