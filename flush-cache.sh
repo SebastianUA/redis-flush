@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash -x
 
 # CREATED:
 # vitaliy.natarov@yahoo.com
@@ -209,7 +209,13 @@ function Flush_Redis_Cache () {
   CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"|uniq|cut -d ">" -f2 | cut -d "<" -f1)
   if [ -z "$CacheRedisIP" ]; then
              CacheRedisIP=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"| uniq|cut -d "[" -f3| cut -d "]" -f1) 
-  fi                      
+  fi
+  #
+  #SOCK                      
+  CacheRedisSock=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"|uniq| cut -d ">" -f2|cut -d "<" -f1| cut -d "." -f2)
+  if [ -z "$CacheRedisSock" ]; then
+             CacheRedisSock=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| grep "<server>"| uniq| cut -d ">" -f2|cut -d "<" -f1| cut -d "." -f2) 
+  fi
   #
   #PORTS
   CacheRedisPorts=$(cat `echo $LocalXML` 2> /dev/null| grep Cache_Backend_Redis -A13| cut -d '>' -f2| grep port | cut -d '<' -f1|uniq)
@@ -228,7 +234,14 @@ function Flush_Redis_Cache () {
   # -n : string is not null.
   # -z : string is null, that is, has zero length
   if [ ! -z "$CacheRedisIP" ]; then
-       echo "CacheRedisIPs: `echo $CacheRedisIP 2> /dev/null`";
+      echo "CacheRedisIPs: `echo $CacheRedisIP 2> /dev/null`";
+      #
+      #flush redis sock
+      if [ "$CacheRedisSock" == "sock" ]; then
+          echo "redis-cli -s `echo $CacheRedisIP` flushall";
+          echo 'flushall' | redis-cli -s `echo $CacheRedisIP`;
+      else    
+
        for ICacheRedisIP in `echo $CacheRedisIP|xargs -I{} -n1 echo {}` ; do
             for ICacheRedisPorts in `echo $CacheRedisPorts|xargs -I{} -n1 echo {}` ; do
                 echo "Cache-redis-ports: `echo $CacheRedisPorts 2> /dev/null`";  
@@ -317,8 +330,10 @@ EOF
                 echo "Flushed redis cache on $ICacheRedisPorts port";
                 $SETCOLOR_NORMAL
             done;
+      #      
      done;
     #
+    fi
 else
      #rm -rf
      $SETCOLOR_TITLE
